@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌾 Smart Irrigation - Sign Up</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+  <div class="auth-container">
+    <div class="auth-box">
+      <div class="auth-header">
+        <h1>🌾 Smart Irrigation System</h1>
+        <p>Smart Water Management for Farmers</p>
+      </div>
+
+      <h2>Create Your Account</h2>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="error-message">
+          <strong>⚠️ Error:</strong> <%= error %>
+        </div>
+      <% } %>
+
+      <% if (typeof success !== 'undefined' && success) { %>
+        <div class="success-message">
+          <strong>✓ Success:</strong> <%= success %>
+        </div>
+      <% } %>
+
+      <form method="POST" action="/signup" class="auth-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input 
+            type="text" 
+            id="username"
+            name="username" 
+            placeholder="Choose a username" 
+            required 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input 
+            type="text" 
+            id="name"
+            name="name" 
+            placeholder="Your full name" 
+            required 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="farmSize">Farm Size (Acres)</label>
+          <input 
+            type="text" 
+            id="farmSize"
+            name="farmSize" 
+            placeholder="e.g., 2.5" 
+            required 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="crop">Crop Type</label>
+          <select id="crop" name="crop" required>
+            <option value="">Select a crop</option>
+            <option value="Tomato">Tomato</option>
+            <option value="Rice">Rice</option>
+            <option value="Wheat">Wheat</option>
+            <option value="Corn">Corn</option>
+            <option value="Sugarcane">Sugarcane</option>
+            <option value="Cotton">Cotton</option>
+            <option value="Potato">Potato</option>
+            <option value="Onion">Onion</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input 
+            type="password" 
+            id="password"
+            name="password" 
+            placeholder="Enter password" 
+            required 
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input 
+            type="password" 
+            id="confirmPassword"
+            name="confirmPassword" 
+            placeholder="Confirm password" 
+            required 
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create Account</button>
+      </form>
+
+      <p class="auth-footer">
+        Already have an account? <a href="/login">Login here</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

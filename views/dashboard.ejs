@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Irrigation Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <header>
+    <h2>🌾 Smart Irrigation Dashboard</h2>
+    <div class="header-info">
+      <span>👤 <%= user.name %> | 🌱 <%= user.crop %> | 📏 <%= user.farmSize %></span>
+    </div>
+    <a href="/profile">Profile</a> |
+    <a href="/logout">Logout</a>
+  </header>
+
+  <div class="container">
+    
+    <!-- Real-time Sensor Data -->
+    <section class="section">
+      <h2 class="section-title">📊 Real-time Sensor Data</h2>
+      <div class="grid">
+        <div class="card stat-card moisture">
+          <div class="icon">💧</div>
+          <h3>Soil Moisture</h3>
+          <p class="stat-value"><%= data.moisture %>%</p>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: <%= data.moisture %>%; background: #2196F3;"></div>
+          </div>
+          <span class="stat-label">Target: 35-45%</span>
+        </div>
+
+        <div class="card stat-card temp">
+          <div class="icon">🌡️</div>
+          <h3>Temperature</h3>
+          <p class="stat-value"><%= data.temperature %>°C</p>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: <%= (data.temperature / 50) * 100 %>%; background: #FF5722;"></div>
+          </div>
+          <span class="stat-label">Normal: 25-35°C</span>
+        </div>
+
+        <div class="card stat-card humidity">
+          <div class="icon">☁️</div>
+          <h3>Humidity</h3>
+          <p class="stat-value"><%= data.humidity %>%</p>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: <%= data.humidity %>%; background: #4CAF50;"></div>
+          </div>
+          <span class="stat-label">Good: 50-70%</span>
+        </div>
+
+        <div class="card stat-card rainfall">
+          <div class="icon">🌧️</div>
+          <h3>Rainfall (24h)</h3>
+          <p class="stat-value"><%= data.rainfall %> mm</p>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: <%= (data.rainfall / 20) * 100 %>%; background: #03A9F4;"></div>
+          </div>
+          <span class="stat-label">This Week</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Water Requirement Section -->
+    <section class="section">
+      <h2 class="section-title">💧 Crop Water Requirement</h2>
+      <div class="grid-2">
+        <div class="card water-req-card">
+          <h3>Today's Water Analysis</h3>
+          <div class="water-stats">
+            <div class="water-stat-item">
+              <span class="label">Required</span>
+              <span class="value required"><%= data.cropWaterReq %> L</span>
+            </div>
+            <div class="water-stat-item">
+              <span class="label">Used</span>
+              <span class="value used"><%= data.actualWaterUsed %> L</span>
+            </div>
+            <div class="water-stat-item">
+              <span class="label">Deficit</span>
+              <span class="value deficit"><%= data.waterDeficit %> L</span>
+            </div>
+          </div>
+          <div class="water-progress">
+            <div class="water-progress-fill" style="width: <%= (data.actualWaterUsed / data.cropWaterReq) * 100 %>%"></div>
+          </div>
+          <p class="efficiency">⚡ Efficiency Score: <strong><%= data.efficiencyScore %>%</strong></p>
+        </div>
+
+        <div class="card irrigation-status-card">
+          <h3>🚿 Irrigation Status</h3>
+          <div class="status-indicator <%= data.irrigationStatus.toLowerCase() %>">
+            <span class="status-dot"></span>
+            <span class="status-text"><%= data.irrigationStatus %></span>
+          </div>
+          <div class="irrigation-details">
+            <div class="detail-row">
+              <span class="detail-label">Current Zone:</span>
+              <span class="detail-value"><%= data.currentZone %></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Time Remaining:</span>
+              <span class="detail-value"><%= data.timeRemaining %></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Next Schedule:</span>
+              <span class="detail-value"><%= data.nextSchedule %></span>
+            </div>
+          </div>
+          <button class="control-btn">Manual Control</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="section">
+      <h2 class="section-title">📈 Weekly Trends</h2>
+      <div class="grid-2">
+        <div class="card chart-card">
+          <h3>Soil Moisture (7 Days)</h3>
+          <canvas id="moistureChart"></canvas>
+        </div>
+
+        <div class="card chart-card">
+          <h3>Temperature Trends</h3>
+          <canvas id="tempChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card chart-card-full">
+        <h3>💦 Daily Water Usage (Liters)</h3>
+        <canvas id="waterUsageChart"></canvas>
+      </div>
+    </section>
+
+    <!-- AI Recommendation -->
+    <div class="card recommendation-card">
+      <h3>🤖 AI Recommendation</h3>
+      <p><%= data.recommendation %></p>
+    </div>
+
+  </div>
+
+  <script>
+    // Data from server
+    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const moistureData = <%= JSON.stringify(data.weeklyMoisture) %>;
+    const tempData = <%= JSON.stringify(data.weeklyTemp) %>;
+    const waterUsageData = <%= JSON.stringify(data.weeklyWaterUsage) %>;
+
+    // Chart.js default config
+    Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+    Chart.defaults.responsive = true;
+    Chart.defaults.maintainAspectRatio = true;
+
+    // Moisture Chart
+    const ctxMoisture = document.getElementById('moistureChart').getContext('2d');
+    new Chart(ctxMoisture, {
+      type: 'line',
+      data: {
+        labels: weekDays,
+        datasets: [{
+          label: 'Soil Moisture %',
+          data: moistureData,
+          borderColor: '#2196F3',
+          backgroundColor: 'rgba(33, 150, 243, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 5,
+          pointBackgroundColor: '#2196F3'
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 50,
+            ticks: { callback: value => value + '%' }
+          }
+        }
+      }
+    });
+
+    // Temperature Chart
+    const ctxTemp = document.getElementById('tempChart').getContext('2d');
+    new Chart(ctxTemp, {
+      type: 'line',
+      data: {
+        labels: weekDays,
+        datasets: [{
+          label: 'Temperature °C',
+          data: tempData,
+          borderColor: '#FF5722',
+          backgroundColor: 'rgba(255, 87, 34, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 5,
+          pointBackgroundColor: '#FF5722'
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: value => value + '°C' }
+          }
+        }
+      }
+    });
+
+    // Water Usage Chart
+    const ctxWater = document.getElementById('waterUsageChart').getContext('2d');
+    new Chart(ctxWater, {
+      type: 'bar',
+      data: {
+        labels: weekDays,
+        datasets: [{
+          label: 'Water Usage (Liters)',
+          data: waterUsageData,
+          backgroundColor: [
+            'rgba(33, 150, 243, 0.7)',
+            'rgba(3, 169, 244, 0.7)',
+            'rgba(0, 188, 212, 0.7)',
+            'rgba(0, 150, 136, 0.7)',
+            'rgba(76, 175, 80, 0.7)',
+            'rgba(139, 195, 74, 0.7)',
+            'rgba(205, 220, 57, 0.7)'
+          ],
+          borderColor: [
+            '#2196F3',
+            '#03A9F4',
+            '#00BCD4',
+            '#009688',
+            '#4CAF50',
+            '#8BC34A',
+            '#CDDC39'
+          ],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { callback: value => value + ' L' }
+          }
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>

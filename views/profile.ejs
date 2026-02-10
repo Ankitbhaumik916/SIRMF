@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>👤 Profile - Smart Irrigation</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="navbar-brand">
+        <h2>🌾 Smart Irrigation System</h2>
+      </div>
+      <nav class="navbar-menu">
+        <a href="/dashboard">📊 Dashboard</a>
+        <a href="/logout" class="btn-logout">🚪 Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="dashboard-container">
+    <div class="profile-container">
+      <div class="profile-card">
+        <h2>👤 Your Profile</h2>
+        
+        <div class="profile-item">
+          <strong>Name:</strong>
+          <span><%= user.name %></span>
+        </div>
+
+        <div class="profile-item">
+          <strong>Username:</strong>
+          <span><%= user.username || 'N/A' %></span>
+        </div>
+
+        <div class="profile-item">
+          <strong>Farm Size:</strong>
+          <span><%= user.farmSize %> Acres</span>
+        </div>
+
+        <div class="profile-item">
+          <strong>Crop Type:</strong>
+          <span><%= user.crop %></span>
+        </div>
+
+        <div class="profile-item">
+          <strong>Location:</strong>
+          <span><%= user.location || 'India' %></span>
+        </div>
+
+        <a href="/dashboard">← Back to Dashboard</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
