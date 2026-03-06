@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Farming Simulation - Standalone Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .header h1 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+      font-size: 2.5em;
+    }
+
+    .header p {
+      color: #555;
+      font-size: 1.1em;
+      line-height: 1.6;
+    }
+
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-group label {
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    input[type='number'],
+    input[type='range'] {
+      padding: 8px 12px;
+      border: 2px solid #3498db;
+      border-radius: 6px;
+      font-size: 1em;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .main-section {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      margin-bottom: 20px;
+    }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+    }
+
+    .canvas-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 400px;
+    }
+
+    #farm-simulator {
+      /* Canvas will be inserted here */
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .sidebar-section {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #3498db;
+    }
+
+    .sidebar-section h3 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      padding: 8px;
+      background: white;
+      border-radius: 4px;
+    }
+
+    .stat-label {
+      font-weight: bold;
+      color: #555;
+    }
+
+    .stat-value {
+      color: #3498db;
+      font-weight: bold;
+    }
+
+    .info-section {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .info-section h2 {
+      color: #2c3e50;
+      margin-bottom: 15px;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .info-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .info-card h4 {
+      margin-bottom: 10px;
+    }
+
+    .info-card p,
+    .info-card li {
+      margin: 5px 0;
+      font-size: 0.95em;
+      line-height: 1.5;
+    }
+
+    .info-card ul {
+      margin-left: 20px;
+    }
+
+    .keyboard-guide {
+      background: #ecf0f1;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+
+    .keyboard-guide h4 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+
+    .key-combo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0;
+    }
+
+    kbd {
+      background: #2c3e50;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    .footer {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      color: #555;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .farm-info-popup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .farm-info-popup.visible {
+      display: flex;
+    }
+
+    .popup-content {
+      background: white;
+      border: 3px solid #333;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      animation: popupSlide 0.3s ease-out;
+    }
+
+    @keyframes popupSlide {
+      from {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.5em;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .close-btn:hover {
+      background: #ff5252;
+    }
+
+    @media (max-width: 768px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .control-group {
+        width: 100%;
+      }
+
+      input[type='number'],
+      input[type='range'] {
+        width: 100%;
+      }
+
+      .header h1 {
+        font-size: 1.8em;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .debug-log {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 0.85em;
+      max-height: 150px;
+      overflow-y: auto;
+      margin-top: 10px;
+    }
+
+    .debug-log-entry {
+      margin: 4px 0;
+      color: #333;
+    }
+
+    .debug-log-entry.error {
+      color: #e74c3c;
+    }
+
+    .debug-log-entry.success {
+      color: #27ae60;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🌾 Pixel-Art Farming Simulation</h1>
+      <p>
+        An interactive farming simulation with dynamic crop management, weather effects, and irrigation
+        systems. Use WASD or arrow keys to move the farmer, and press E to inspect nearby farms.
+      </p>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="control-group">
+        <label for="landArea">Land Area (sq units):</label>
+        <input type="number" id="landArea" value="100" min="50" max="500" step="10" />
+      </div>
+      <div class="control-group">
+        <label for="tileSize">Tile Size (px):</label>
+        <input type="number" id="tileSize" value="32" min="16" max="64" step="4" />
+      </div>
+      <button onclick="resetSimulation()">Reset Simulation</button>
+      <button onclick="showStats()">Show Stats</button>
+    </div>
+
+    <!-- Main Simulation -->
+    <div class="main-section">
+      <div class="main-content">
+        <div class="canvas-wrapper">
+          <div id="farm-simulator" style="width: 100%; max-width: 600px"></div>
+        </div>
+
+        <div class="sidebar">
+          <div class="sidebar-section">
+            <h3>📊 Dashboard</h3>
+            <div id="dashboard-stats">
+              <div class="stat">
+                <span class="stat-label">Weather:</span>
+                <span class="stat-value" id="weather">Loading...</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Total Farms:</span>
+                <span class="stat-value" id="totalFarms">-</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Needs Irrigation:</span>
+                <span class="stat-value" id="needsIrrigation">-</span>
+              </div>
+              <div class="stat">
+                <span class="stat-label">Avg Moisture:</span>
+                <span class="stat-value" id="avgMoisture">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <h3>📍 Selected Farm</h3>
+            <div id="selected-farm-info">
+              <p style="color: #999">Click E near a farm to select</p>
+            </div>
+          </div>
+
+          <div class="keyboard-guide">
+            <h4>⌨️ Controls</h4>
+            <div class="key-combo">
+              <kbd>W/A/S/D</kbd>
+              <span>Move</span>
+            </div>
+            <div class="key-combo">
+              <kbd>↑/←/↓/→</kbd>
+              <span>Move</span>
+            </div>
+            <div class="key-combo">
+              <kbd>E</kbd>
+              <span>Inspect Farm</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Information Sections -->
+    <div class="info-section">
+      <h2>Game Features</h2>
+      <div class="info-grid">
+        <div class="info-card">
+          <h4>🌱 Soil Moisture</h4>
+          <p>Each farm tile tracks soil moisture (0-100%). Moisture decreases through evaporation and increases through irrigation and rain.</p>
+          <ul>
+            <li><strong>Dry:</strong> &lt; 30% (Brown)</li>
+            <li><strong>Healthy:</strong> 40-70% (Green)</li>
+            <li><strong>Wet:</strong> &gt; 75% (Dark Blue)</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>🚜 Crop Health</h4>
+          <p>Crop health (0-100%) improves when moisture is optimal and decreases in extreme conditions. Visualized as a colored circle on each tile.</p>
+          <ul>
+            <li>Increases in optimal range</li>
+            <li>Decreases if too dry or wet</li>
+            <li>Affects farm productivity</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>💧 Irrigation System</h4>
+          <p>Automatically activates when soil moisture drops below 35% and deactivates above 70%. Manual control coming in future updates.</p>
+          <ul>
+            <li>Auto-activation threshold: 35%</li>
+            <li>Auto-deactivation threshold: 70%</li>
+            <li>Adds 15 moisture units/sec when active</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>⛅ Weather System</h4>
+          <p>Weather affects evaporation rates and moisture gains. Changes randomly every 5 seconds.</p>
+          <ul>
+            <li><strong>☀️ Sunny:</strong> 12 units/sec loss</li>
+            <li><strong>☁️ Cloudy:</strong> 6 units/sec loss</li>
+            <li><strong>🌧️ Rainy:</strong> 2 units/sec loss + 8 gain</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>🗺️ Farm Layout</h4>
+          <p>The simulation includes a house at the center, water tank at top-left, pathways, and surrounding farmland tiles.</p>
+          <ul>
+            <li>Brown/Tan: House & Pathways</li>
+            <li>Blue: Water Tank</li>
+            <li>Variable: Farmland (based on moisture)</li>
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h4>👨‍🌾 Farmer Control</h4>
+          <p>Move the farmer character around the map to inspect different farm tiles and understand the simulation behavior.</p>
+          <ul>
+            <li>Navigate using keys</li>
+            <li>Press E to inspect farms</li>
+            <li>View detailed farm information</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tips Section -->
+    <div class="info-section">
+      <h2>Tips for Optimal Farming</h2>
+      <div class="info-grid">
+        <div class="info-card">
+          <h4>Optimal Moisture Range</h4>
+          <p>Keep soil moisture between 40-70% for maximum crop health. This is the sweet spot where crops thrive and grow best.</p>
+        </div>
+
+        <div class="info-card">
+          <h4>Weather Adaptation</h4>
+          <p>Monitor the weather system. During sunny days, decrease irrigation frequency. During rain, reduce manual irrigation to save water.</p>
+        </div>
+
+        <div class="info-card">
+          <h4>Avoid Overwatering</h4>
+          <p>Overwatered crops (moisture &gt; 75%) suffer crop health loss. The auto-system helps, but monitor individual farms for anomalies.</p>
+        </div>
+
+        <div class="info-card">
+          <h4>Track Farm Statistics</h4>
+          <p>Use the dashboard to monitor average moisture and farms needing irrigation. This helps identify irrigation schedule optimization.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>
+        Pixel-Art Precision Farming Simulation © 2024 |
+        <strong>Instructions:</strong> Use WASD or Arrow Keys to navigate | Press
+        <strong>E</strong> to inspect farms | Check dashboard for real-time statistics
+      </p>
+    </div>
+  </div>
+
+  <!-- Farm Info Popup -->
+  <div class="farm-info-popup" id="farmPopup">
+    <button class="close-btn" onclick="closeFarmPopup()">×</button>
+    <div class="popup-content" id="popupContent" onclick="event.stopPropagation()">
+      <h3>Farm Details</h3>
+      <div id="popupInfo"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../utils/farmingSimulation.js"></script>
+  <script>
+    let simulation = null;
+
+    // Initialize simulation on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      initSimulation();
+      // Update stats every frame
+      setInterval(updateDashboard, 500);
+    });
+
+    function initSimulation() {
+      const landArea = parseInt(document.getElementById('landArea').value);
+      const tileSize = parseInt(document.getElementById('tileSize').value);
+
+      if (simulation) {
+        simulation.stop();
+      }
+
+      const tilesPerSide = Math.max(6, Math.ceil(Math.sqrt(landArea / 10)));
+
+      simulation = new FarmingSimulation('farm-simulator', tilesPerSide, tilesPerSide, tileSize);
+
+      // Set callback for farm selection
+      simulation.setFarmInfoCallback((farmInfo) => {
+        showFarmPopup(farmInfo);
+      });
+
+      logDebug('Simulation initialized with ' + tilesPerSide + 'x' + tilesPerSide + ' grid');
+    }
+
+    function resetSimulation() {
+      initSimulation();
+      logDebug('Simulation reset');
+    }
+
+    function updateDashboard() {
+      if (!simulation) return;
+
+      const stats = simulation.getFarmStats();
+
+      document.getElementById('weather').textContent = stats.currentWeather.toUpperCase();
+      document.getElementById('totalFarms').textContent = stats.totalFarms;
+      document.getElementById('needsIrrigation').textContent = stats.farmsNeedingIrrigation;
+      document.getElementById('avgMoisture').textContent = stats.averageMoisture + '%';
+    }
+
+    function showStats() {
+      if (!simulation) return;
+      const stats = simulation.getFarmStats();
+      console.log('Farm Statistics:', stats);
+      alert(
+        'Farm Statistics:\n\n' +
+          'Total Farms: ' +
+          stats.totalFarms +
+          '\n' +
+          'Farms Needing Irrigation: ' +
+          stats.farmsNeedingIrrigation +
+          '\n' +
+          'Average Soil Moisture: ' +
+          stats.averageMoisture +
+          '%\n' +
+          'Current Weather: ' +
+          stats.currentWeather
+      );
+    }
+
+    function showFarmPopup(farmInfo) {
+      const popup = document.getElementById('farmPopup');
+      const popupInfo = document.getElementById('popupInfo');
+
+      popupInfo.innerHTML = `
+        <div class="stat">
+          <span class="stat-label">Farm ID:</span>
+          <span class="stat-value">${farmInfo.id}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Soil Moisture:</span>
+          <span class="stat-value">${farmInfo.soilMoisture}%</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Crop Health:</span>
+          <span class="stat-value">${farmInfo.cropHealth}%</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Irrigation Status:</span>
+          <span class="stat-value">${farmInfo.irrigationStatus}</span>
+        </div>
+      `;
+
+      // Also update sidebar
+      document.getElementById('selected-farm-info').innerHTML = popupInfo.innerHTML;
+
+      popup.classList.add('visible');
+      logDebug('Farm selected: ' + farmInfo.id);
+    }
+
+    function closeFarmPopup() {
+      document.getElementById('farmPopup').classList.remove('visible');
+    }
+
+    // Close popup on background click
+    document.getElementById('farmPopup').addEventListener('click', closeFarmPopup);
+
+    // Close popup on ESC key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeFarmPopup();
+      }
+    });
+
+    // Land area change handler
+    document.getElementById('landArea').addEventListener('change', () => {
+      initSimulation();
+    });
+
+    // Tile size change handler
+    document.getElementById('tileSize').addEventListener('change', () => {
+      initSimulation();
+    });
+
+    function logDebug(message) {
+      console.log('[Farm Sim]', message);
+    }
+  </script>
+</body>
+</html>

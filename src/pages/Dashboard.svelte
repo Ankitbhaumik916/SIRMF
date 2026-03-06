@@ -36,6 +36,10 @@
   function handleRefresh() {
     loadDashboardData()
   }
+
+  function handleNavigation(event) {
+    dispatch('navigate', event.detail)
+  }
 </script>
 
 <div class="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
@@ -107,7 +111,7 @@
 
       <!-- Weather & Irrigation Status -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <WeatherCard weather={data.weather} />
+        <WeatherCard weather={data.weather} location={$authStore.user.location} on:navigate={handleNavigation} />
         <IrrigationStatus irrigation={data.irrigation} water={data.water} />
       </div>
 

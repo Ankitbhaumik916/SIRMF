@@ -10,7 +10,9 @@
     "dev:server": "node server.js --watch",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "farm-sim": "python python_sim/farm_sim.py",
+    "farm-sim:ankit22": "python python_sim/farm_sim.py --username Ankit22"
   },
   "keywords": [
     "farming",

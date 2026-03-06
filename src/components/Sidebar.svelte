@@ -61,8 +61,8 @@
     <!-- User Info -->
     <div class="p-4 border-b border-green-700 mx-3 mt-3 rounded-lg bg-green-700/50">
       <p class="text-xs text-green-100">Logged in as</p>
-      <p class="font-semibold truncate">{$authStore.user.name}</p>
-      <p class="text-xs text-green-200">{$authStore.user.farmSize} • {$authStore.user.crop}</p>
+      <p class="font-semibold truncate">{$authStore.user?.name || 'User'}</p>
+      <p class="text-xs text-green-200">{$authStore.user?.farmSize || '-'} • {$authStore.user?.crop || '-'}</p>
     </div>
 
     <!-- Navigation Menu -->

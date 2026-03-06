@@ -1,0 +1,26 @@
+{
+  "Ankit": {
+    "username": "Ankit",
+    "name": "Ankit",
+    "farmSize": "1.5",
+    "crop": "Rice",
+    "location": "kolkata",
+    "passwordHash": "QTEyMzQ1",
+    "lat": null,
+    "lon": null,
+    "createdAt": "2026-02-19T06:24:40.557Z",
+    "updatedAt": "2026-02-19T06:24:40.557Z"
+  },
+  "Ankit22": {
+    "username": "Ankit22",
+    "name": "Ankit2",
+    "farmSize": "3",
+    "crop": "Rice",
+    "location": "Malda, West Bengal",
+    "passwordHash": "QTEyMzQ1",
+    "lat": null,
+    "lon": null,
+    "createdAt": "2026-03-05T14:36:39.206Z",
+    "updatedAt": "2026-03-05T14:36:39.206Z"
+  }
+}

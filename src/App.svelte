@@ -5,6 +5,8 @@
   import Signup from './pages/Signup.svelte'
   import Dashboard from './pages/Dashboard.svelte'
   import Profile from './pages/Profile.svelte'
+  import Weather from './pages/Weather.svelte'
+  import FarmInfo from './pages/FarmInfo.svelte'
   import Sidebar from './components/Sidebar.svelte'
 
   let currentPage = 'loading'
@@ -46,28 +48,22 @@
     <Signup on:navigate={handleNavigation} />
   {/if}
 {:else}
-  <div class="flex">
+  <div class="flex h-screen bg-white">
     <Sidebar on:navigate={handleNavigation} />
-    <main class="flex-1 overflow-auto">
+    <main class="flex-1 overflow-auto bg-white">
       {#if currentPage === 'dashboard'}
         <Dashboard on:navigate={handleNavigation} />
       {:else if currentPage === 'profile'}
         <Profile on:navigate={handleNavigation} />
       {:else if currentPage === 'weather'}
-        <div class="p-8">
-          <h1 class="text-3xl font-bold mb-4">🌤️ Weather Dashboard</h1>
-          <p class="text-gray-600">Weather page coming soon...</p>
-        </div>
+        <Weather on:navigate={handleNavigation} />
       {:else if currentPage === 'irrigation'}
         <div class="p-8">
           <h1 class="text-3xl font-bold mb-4">💧 Irrigation Management</h1>
           <p class="text-gray-600">Irrigation management page coming soon...</p>
         </div>
       {:else if currentPage === 'farm'}
-        <div class="p-8">
-          <h1 class="text-3xl font-bold mb-4">🌾 Farm Information</h1>
-          <p class="text-gray-600">Farm information page coming soon...</p>
-        </div>
+        <FarmInfo />
       {:else if currentPage === 'settings'}
         <div class="p-8">
           <h1 class="text-3xl font-bold mb-4">⚙️ Settings</h1>
