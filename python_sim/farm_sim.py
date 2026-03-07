@@ -9,11 +9,17 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+# Ensure we can import modules from this directory
+sys.path.insert(0, str(Path(__file__).parent))
+
 try:
     import pygame
 except ImportError:
     print("pygame is not installed. Install it with: pip install pygame")
     sys.exit(1)
+
+from ml_irrigation_predictor import load_predictor
+from graphics_enhanced import EnhancedGraphicsEngine
 
 
 TILE_UNIT_AREA = 0.1  # Each farmland tile represents 0.1 sq units.
@@ -48,9 +54,30 @@ CROP_PROFILES = {
 
 
 WEATHER_CONFIG = {
-    "sunny": {"evap": 12.0, "rain_gain": 0.0, "color": (255, 220, 120)},
-    "cloudy": {"evap": 6.0, "rain_gain": 0.0, "color": (180, 190, 205)},
-    "rainy": {"evap": 2.0, "rain_gain": 8.0, "color": (125, 165, 230)},
+    "sunny": {
+        "evap": 12.0,
+        "rain_gain": 0.0,
+        "color": (255, 220, 120),
+        "temp": 32,
+        "humidity": 35,
+        "rainfall": 0.0,
+    },
+    "cloudy": {
+        "evap": 6.0,
+        "rain_gain": 0.0,
+        "color": (180, 190, 205),
+        "temp": 22,
+        "humidity": 55,
+        "rainfall": 0.0,
+    },
+    "rainy": {
+        "evap": 2.0,
+        "rain_gain": 8.0,
+        "color": (125, 165, 230),
+        "temp": 18,
+        "humidity": 85,
+        "rainfall": 5.0,
+    },
 }
 
 
@@ -103,6 +130,31 @@ class FarmSimulation:
         self.weather_description = "simulated"
         self.running = True
         self.selected_tile = None
+        
+        # Initialize current weather conditions from config
+        cfg = WEATHER_CONFIG[self.weather]
+        self.current_temp = cfg.get("temp", 25)
+        self.current_humidity = cfg.get("humidity", 50)
+        self.current_rainfall = cfg.get("rainfall", 0.0)
+        
+        # Initialize ML irrigation predictor
+        try:
+            self.ml_predictor = load_predictor()
+            self.use_ml_irrigation = True
+        except Exception as e:
+            print(f"Warning: Could not load ML predictor: {e}")
+            print("Falling back to simple irrigation logic")
+            self.ml_predictor = None
+            self.use_ml_irrigation = False
+        
+        # AI decision tracking for HUD display
+        self.ai_decision_message = ""
+        self.ai_decision_timer = 0.0
+        
+        # Initialize enhanced graphics engine
+        self.graphics = EnhancedGraphicsEngine(
+            self.screen, self.grid_w, self.grid_h, TILE_SIZE, HUD_WIDTH
+        )
 
     def _build_map(self):
         self.tiles = [[Tile(x, y, "path") for x in range(self.grid_w)] for y in range(self.grid_h)]
@@ -125,27 +177,6 @@ class FarmSimulation:
                 if x == 0 or y == 0 or x == self.grid_w - 1 or y == self.grid_h - 1:
                     self.tiles[y][x] = Tile(x, y, "path")
 
-    def _tile_color(self, tile: Tile):
-        if tile.tile_type == "house":
-            return (180, 120, 80)
-        if tile.tile_type == "water":
-            return (80, 150, 220)
-        if tile.tile_type == "path":
-            return (145, 120, 90)
-
-        if tile.moisture < 30:
-            return (155, 105, 65)
-        if tile.moisture > 75:
-            return (45, 80, 140)
-        return (85, 145, 78)
-
-    def _health_color(self, health: float):
-        if health >= 70:
-            return (80, 220, 100)
-        if health >= 40:
-            return (245, 210, 80)
-        return (235, 100, 85)
-
     def _update_weather(self, dt: float):
         self.weather_fetch_timer += dt
         if self.location and self.weather_fetch_timer >= self.weather_fetch_interval:
@@ -158,6 +189,12 @@ class FarmSimulation:
             # Keep real weather stable when sourced from backend; otherwise simulate.
             if self.weather_source != "project-api":
                 self.weather = random.choice(list(WEATHER_CONFIG.keys()))
+        
+        # Update current weather conditions from config
+        cfg = WEATHER_CONFIG[self.weather]
+        self.current_temp = cfg.get("temp", 25)
+        self.current_humidity = cfg.get("humidity", 50)
+        self.current_rainfall = cfg.get("rainfall", 0.0)
 
     def _map_project_weather_to_state(self, weather_obj: dict) -> str:
         icon = str(weather_obj.get("icon", "")).lower()
@@ -195,13 +232,41 @@ class FarmSimulation:
             tile.moisture -= cfg["evap"] * dt
             tile.moisture += cfg["rain_gain"] * dt
 
-            if tile.irrigation_on:
-                tile.moisture += 15.0 * dt
+            # Use ML-based irrigation if available
+            if self.use_ml_irrigation and self.ml_predictor is not None:
+                try:
+                    decision, amount, reasoning = self.ml_predictor.predict(
+                        crop=self.crop_key,
+                        farm_area=self.land_area,
+                        temperature=self.current_temp,
+                        humidity=self.current_humidity,
+                        rainfall=self.current_rainfall,
+                        soil_moisture=tile.moisture,
+                        location=self.location or "General",
+                    )
+                    
+                    # Apply ML-based irrigation
+                    if decision == 1 and amount > 0:
+                        liters_per_tile = amount / len(self.farmland_positions)
+                        tile.moisture += (liters_per_tile / 100) * dt
+                        # Store message for HUD display
+                        self.ai_decision_message = reasoning
+                        self.ai_decision_timer = 4.0
+                except Exception as e:
+                    # Fallback to simple logic if ML prediction fails
+                    if tile.irrigation_on:
+                        tile.moisture += 15.0 * dt
+            else:
+                # Simple fallback irrigation logic
+                if tile.irrigation_on:
+                    tile.moisture += 15.0 * dt
 
-            if tile.moisture < 35:
-                tile.irrigation_on = True
-            elif tile.moisture > 70:
-                tile.irrigation_on = False
+            # Simple threshold-based irrigation trigger (used when ML not available)
+            if not self.use_ml_irrigation or self.ml_predictor is None:
+                if tile.moisture < 35:
+                    tile.irrigation_on = True
+                elif tile.moisture > 70:
+                    tile.irrigation_on = False
 
             tile.moisture = max(0.0, min(100.0, tile.moisture))
 
@@ -239,90 +304,71 @@ class FarmSimulation:
         return None
 
     def _draw_world(self):
+        """Draw world using enhanced graphics engine."""
         self.screen.fill((22, 28, 34))
         world_rect = pygame.Rect(0, 0, self.grid_w * TILE_SIZE, self.grid_h * TILE_SIZE)
         pygame.draw.rect(self.screen, (40, 65, 40), world_rect)
 
-        for y in range(self.grid_h):
-            for x in range(self.grid_w):
-                tile = self.tiles[y][x]
-                rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE - 1, TILE_SIZE - 1)
-                pygame.draw.rect(self.screen, self._tile_color(tile), rect)
+        # Draw all non-farmland tiles
+        self.graphics.draw_other_tiles(self.screen, self.tiles)
+        
+        # Draw farmland tiles with enhanced rendering
+        self.graphics.draw_farmland(self.screen, self.tiles, self.farmland_positions)
+        
+        # Draw weather effects
+        self.graphics.draw_weather_effects(self.screen, self.weather)
 
-                if tile.tile_type == "farmland":
-                    hc = self._health_color(tile.health)
-                    cx = x * TILE_SIZE + TILE_SIZE // 2
-                    cy = y * TILE_SIZE + TILE_SIZE // 2
-                    pygame.draw.circle(self.screen, hc, (cx, cy), 4)
-
-                    if tile.irrigation_on:
-                        pygame.draw.circle(self.screen, (70, 190, 255), (cx + 8, cy - 8), 3)
-
+        # Draw player character
         px = self.player_x * TILE_SIZE + TILE_SIZE // 2
         py = self.player_y * TILE_SIZE + TILE_SIZE // 2
         pygame.draw.rect(self.screen, (245, 235, 180), pygame.Rect(px - 6, py - 6, 12, 12))
         pygame.draw.rect(self.screen, (130, 90, 65), pygame.Rect(px - 5, py + 2, 10, 4))
 
     def _draw_hud(self):
-        x0 = self.grid_w * TILE_SIZE
-        hud = pygame.Rect(x0, 0, HUD_WIDTH, self.screen_h)
-        pygame.draw.rect(self.screen, (28, 33, 44), hud)
-
-        lines = [
-            f"Farmer: {self.farmer_name}",
-            f"Crop: {self.crop_name}",
-            f"Location: {self.location or 'N/A'}",
-            f"Land Area: {self.land_area:.2f}",
-            f"Tile Unit: {TILE_UNIT_AREA:.1f}",
-            f"Farm Tiles: {self.farmland_tiles_target}",
-            f"Weather: {self.weather}",
-            f"Weather Src: {self.weather_source}",
-        ]
-
+        """Draw HUD using enhanced graphics engine."""
+        self.graphics.update(0.016)  # Update animations
+        
+        # Prepare game state dict for graphics engine
         avg_m = self._avg_moisture()
-        need_i = self._farms_needing_irrigation()
-        lines += [
-            f"Avg Moisture: {avg_m:.1f}%",
-            f"Need Irrigation: {need_i}",
-            f"Desc: {self.weather_description[:28]}",
-            "",
-            "Controls:",
-            "WASD / Arrows -> move",
-            "E -> inspect nearby tile",
-            "Q -> clear inspection",
-            "ESC -> quit",
-        ]
-
-        yy = 16
-        for i, txt in enumerate(lines):
-            font = self.font if i < 8 else self.small_font
-            color = (225, 235, 245) if i != 5 else WEATHER_CONFIG[self.weather]["color"]
-            surf = font.render(txt, True, color)
-            self.screen.blit(surf, (x0 + 14, yy))
-            yy += 24 if i < 8 else 20
-
+        avg_h = self._avg_health()
+        
+        game_state = {
+            "farmer_name": self.farmer_name,
+            "crop_name": self.crop_name,
+            "land_area": self.land_area,
+            "location": self.location or "N/A",
+            "weather": self.weather,
+            "current_temp": self.current_temp,
+            "current_humidity": self.current_humidity,
+            "current_rainfall": self.current_rainfall,
+            "weather_source": self.weather_source,
+            "avg_moisture": avg_m,
+            "avg_health": avg_h,
+            "ai_decision_message": self.ai_decision_message if self.ai_decision_timer > 0 else "",
+        }
+        
+        self.graphics.draw_enhanced_hud(self.screen, game_state)
+        
+        # Draw selected tile info if any
+        x0 = self.grid_w * TILE_SIZE
         if self.selected_tile is not None:
-            yb = self.screen_h - 180
-            box = pygame.Rect(x0 + 12, yb, HUD_WIDTH - 24, 160)
-            pygame.draw.rect(self.screen, (42, 52, 68), box, border_radius=8)
-            pygame.draw.rect(self.screen, (110, 185, 120), box, width=2, border_radius=8)
-
-            t = self.selected_tile
-            data = [
-                "Selected Farm Tile",
-                f"Pos: ({t.x}, {t.y})",
-                f"Moisture: {t.moisture:.1f}%",
-                f"Health: {t.health:.1f}%",
-                f"Irrigation: {'ON' if t.irrigation_on else 'OFF'}",
-            ]
-            yy = yb + 12
-            for idx, txt in enumerate(data):
-                surf = self.small_font.render(txt, True, (236, 244, 252) if idx == 0 else (212, 228, 240))
-                self.screen.blit(surf, (x0 + 20, yy))
-                yy += 26
+            self.graphics.draw_selected_tile_info(
+                self.screen, self.selected_tile,
+                x0 + HUD_WIDTH - 150,
+                self.screen_h - 20,
+                140
+            )
+        
+        # Update AI message timer
+        if self.ai_decision_timer > 0:
+            self.ai_decision_timer -= 0.016
 
     def _avg_moisture(self):
         vals = [self.tiles[y][x].moisture for x, y in self.farmland_positions]
+        return sum(vals) / len(vals) if vals else 0.0
+    
+    def _avg_health(self):
+        vals = [self.tiles[y][x].health for x, y in self.farmland_positions]
         return sum(vals) / len(vals) if vals else 0.0
 
     def _farms_needing_irrigation(self):

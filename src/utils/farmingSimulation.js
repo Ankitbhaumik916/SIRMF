@@ -77,15 +77,35 @@ class FarmTile {
     }
   }
 
-  getColor() {
-    if (this.tileType === 'house') return '#CD853F';
-    if (this.tileType === 'water') return '#4A90E2';
-    if (this.tileType === 'path') return '#A0826D';
+  // Smooth color interpolation based on moisture
+  lerpColor(color1, color2, t) {
+    const c1 = parseInt(color1.slice(1), 16);
+    const c2 = parseInt(color2.slice(1), 16);
+    const r = Math.round((c1 >> 16 & 0xff) * (1 - t) + (c2 >> 16 & 0xff) * t);
+    const g = Math.round((c1 >> 8 & 0xff) * (1 - t) + (c2 >> 8 & 0xff) * t);
+    const b = Math.round((c1 & 0xff) * (1 - t) + (c2 & 0xff) * t);
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+  }
 
-    // Farmland color based on moisture
-    if (this.soilMoisture < 30) return '#8B6914'; // Dry brown
-    if (this.soilMoisture > 75) return '#1E3A8A'; // Overwatered dark blue
-    return '#2D5016'; // Healthy green
+  getColor() {
+    if (this.tileType === 'house') return '#B47850';
+    if (this.tileType === 'water') return '#5096E2';
+    if (this.tileType === 'path') return '#8A7968';
+
+    // Farmland color gradient based on moisture
+    const dryBrown = '#9B6940';      // Dark brown (dry)
+    const healthyGreen = '#55912E';  // Green (healthy)
+    const wetBlue = '#2D508C';       // Deep blue (wet)
+
+    if (this.soilMoisture < 50) {
+      // Dry to Healthy transition
+      const t = this.soilMoisture / 50;
+      return this.lerpColor(dryBrown, healthyGreen, t);
+    } else {
+      // Healthy to Wet transition
+      const t = (this.soilMoisture - 50) / 50;
+      return this.lerpColor(healthyGreen, wetBlue, t);
+    }
   }
 }
 
@@ -274,18 +294,52 @@ class GameRenderer {
     this.ctx.fillRect(x, y, size, size);
 
     // Draw grid
-    this.ctx.strokeStyle = '#666666';
+    this.ctx.strokeStyle = '#555555';
     this.ctx.lineWidth = 1;
     this.ctx.strokeRect(x, y, size, size);
 
-    // Draw crop status icon on farmland
+    // Draw moisture bar at bottom for farmland
     if (farm.tileType === 'farmland') {
+      this.drawMoistureBar(farm, x, y);
       this.drawCropStatus(farm, x, y);
+      
+      // Draw irrigation pulse animation
+      if (farm.irrigationActive) {
+        this.drawIrrigationPulse(farm, x, y);
+      }
     } else if (farm.tileType === 'house') {
       this.drawHouse(x, y);
     } else if (farm.tileType === 'water') {
       this.drawWaterTank(x, y);
     }
+  }
+
+  drawMoistureBar(farm, x, y) {
+    const barHeight = 3;
+    const barY = y + this.tileSize - barHeight;
+    
+    // Background
+    this.ctx.fillStyle = '#2a2a2a';
+    this.ctx.fillRect(x, barY, this.tileSize, barHeight);
+    
+    // Moisture bar
+    const moistureWidth = (farm.soilMoisture / 100) * this.tileSize;
+    this.ctx.fillStyle = '#64B4FF'; // Bright blue
+    this.ctx.fillRect(x, barY, moistureWidth, barHeight);
+  }
+
+  drawIrrigationPulse(farm, x, y) {
+    const pulse = Math.sin(Date.now() * 0.004) * 0.5 + 0.5;
+    const indent = 2 + pulse * 2;
+    
+    this.ctx.strokeStyle = '#64FF64';
+    this.ctx.lineWidth = 2;
+    this.ctx.strokeRect(
+      x + indent,
+      y + indent,
+      this.tileSize - indent * 2,
+      this.tileSize - indent * 2
+    );
   }
 
   drawCropStatus(farm, x, y) {
