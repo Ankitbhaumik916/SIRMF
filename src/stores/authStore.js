@@ -10,7 +10,9 @@ export const authStore = writable({
 // Check if user is logged in on app load
 export async function checkAuth() {
   try {
-    const response = await fetch('/api/auth/user')
+    const response = await fetch('/api/auth/user', {
+      credentials: 'include'
+    })
     if (response.ok) {
       const user = await response.json()
       authStore.set({
@@ -43,6 +45,7 @@ export async function login(username, password) {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ username, password }),
     })
 
@@ -68,6 +71,7 @@ export async function signup(userData) {
     const response = await fetch('/api/auth/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(userData),
     })
 
@@ -80,7 +84,10 @@ export async function signup(userData) {
 
 export async function logout() {
   try {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    await fetch('/api/auth/logout', { 
+      method: 'POST',
+      credentials: 'include'
+    })
     authStore.set({
       user: null,
       isAuthenticated: false,

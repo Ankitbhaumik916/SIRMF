@@ -654,7 +654,5 @@ class FarmingSimulation {
   }
 }
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = FarmingSimulation;
-}
+// Export for ES6 modules (Vite/Svelte)
+export default FarmingSimulation;

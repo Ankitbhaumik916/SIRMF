@@ -58,6 +58,7 @@
           </div>
         {/if}
 
+        <form on:submit|preventDefault={handleLogin}>
         <div class="mb-6">
           <label for="username" class="block text-sm font-semibold text-gray-700 mb-2">
             Username
@@ -110,12 +111,13 @@
         </div>
 
         <button
-          on:click={handleLogin}
+          type="submit"
           disabled={loading}
           class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? 'Logging in...' : 'Login'}
         </button>
+        </form>
 
         <p class="text-center text-gray-600 text-sm mt-4">
           Demo: username=<span class="font-mono font-semibold">demo</span>, password=<span class="font-mono font-semibold">demo123</span>

@@ -10,27 +10,43 @@
   let farmInfoPopup = null;
 
   onMount(() => {
-    if (!containerElement) return;
-
-    // Calculate map dimensions based on user's land area
-    // Assuming each tile represents ~10 sq units
-    const tilesPerSide = Math.max(6, Math.ceil(Math.sqrt(userLandArea / 10)));
-    
-    // Initialize simulation
-    simulation = new FarmingSimulation(
-      containerElement.id,
-      tilesPerSide,
-      tilesPerSide,
-      32 // tileSize in pixels
-    );
-
-    // Set callback for farm selection
-    simulation.setFarmInfoCallback((farmInfo) => {
-      farmInfoPopup = farmInfo;
-      if (onFarmSelect) {
-        onFarmSelect(farmInfo);
+    // Wait for next tick to ensure DOM is ready
+    setTimeout(() => {
+      if (!containerElement) {
+        console.error('Container element not found');
+        return;
       }
-    });
+
+      try {
+        // Calculate map dimensions based on user's land area
+        // Assuming each tile represents ~10 sq units
+        const tilesPerSide = Math.max(6, Math.ceil(Math.sqrt(userLandArea / 10)));
+        
+        console.log('Initializing simulation with:', {
+          landArea: userLandArea,
+          tilesPerSide,
+          containerId: containerElement.id
+        });
+        
+        // Initialize simulation
+        simulation = new FarmingSimulation(
+          containerElement.id,
+          tilesPerSide,
+          tilesPerSide,
+          32 // tileSize in pixels
+        );
+
+        // Set callback for farm selection
+        simulation.setFarmInfoCallback((farmInfo) => {
+          farmInfoPopup = farmInfo;
+          if (onFarmSelect) {
+            onFarmSelect(farmInfo);
+          }
+        });
+      } catch (error) {
+        console.error('Error initializing simulation:', error);
+      }
+    }, 100);
 
     return () => {
       if (simulation) {
