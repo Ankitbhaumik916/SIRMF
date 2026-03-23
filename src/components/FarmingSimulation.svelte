@@ -4,6 +4,7 @@
 
   export let userLandArea = 100; // Land area in square units
   export let onFarmSelect = null;
+  export let onStatsUpdate = null;
 
   let simulation = null;
   let containerElement;
@@ -41,6 +42,12 @@
           farmInfoPopup = farmInfo;
           if (onFarmSelect) {
             onFarmSelect(farmInfo);
+          }
+        });
+
+        simulation.setFarmStatsCallback((stats) => {
+          if (onStatsUpdate) {
+            onStatsUpdate(stats);
           }
         });
       } catch (error) {

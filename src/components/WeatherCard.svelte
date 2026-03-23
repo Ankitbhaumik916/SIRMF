@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte'
+  import { languageStore, t } from '../stores/i18nStore'
   
   export let weather = {}
   export let location = 'User Location'
@@ -29,14 +30,14 @@
 <div class="bg-gradient-to-br from-blue-400 to-cyan-500 rounded-lg shadow-lg p-6 text-white">
   <div class="flex items-start justify-between mb-4">
     <div>
-      <h3 class="text-lg font-bold">🌤️ Current Weather</h3>
+      <h3 class="text-lg font-bold">🌤️ {t('weatherCard.currentWeather', $languageStore)}</h3>
       <p class="text-blue-100 text-sm">{location}</p>
     </div>
     <button
       on:click={handleViewFull}
       class="px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 rounded text-sm font-semibold transition"
     >
-      View Full
+      {t('weatherCard.viewFull', $languageStore)}
     </button>
   </div>
 
@@ -54,28 +55,28 @@
     <div class="space-y-2">
       <div class="bg-white bg-opacity-20 rounded p-3 backdrop-blur">
         <div class="flex justify-between items-center">
-          <p class="text-blue-100 text-sm">Humidity</p>
+          <p class="text-blue-100 text-sm">{t('weatherCard.humidity', $languageStore)}</p>
           <p class="font-bold">{weather.humidity}%</p>
         </div>
       </div>
 
       <div class="bg-white bg-opacity-20 rounded p-3 backdrop-blur">
         <div class="flex justify-between items-center">
-          <p class="text-blue-100 text-sm">Wind Speed</p>
+          <p class="text-blue-100 text-sm">{t('weatherCard.windSpeed', $languageStore)}</p>
           <p class="font-bold">{weather.windSpeed} km/h</p>
         </div>
       </div>
 
       <div class="bg-white bg-opacity-20 rounded p-3 backdrop-blur">
         <div class="flex justify-between items-center">
-          <p class="text-blue-100 text-sm">Pressure</p>
+          <p class="text-blue-100 text-sm">{t('weatherCard.pressure', $languageStore)}</p>
           <p class="font-bold">{weather.pressure} mb</p>
         </div>
       </div>
 
       <div class="bg-white bg-opacity-20 rounded p-3 backdrop-blur">
         <div class="flex justify-between items-center">
-          <p class="text-blue-100 text-sm">Clouds</p>
+          <p class="text-blue-100 text-sm">{t('weatherCard.clouds', $languageStore)}</p>
           <p class="font-bold">{weather.cloudiness}%</p>
         </div>
       </div>

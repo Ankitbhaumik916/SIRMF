@@ -3,6 +3,7 @@ import session from 'express-session'
 import axios from 'axios'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import { spawn } from 'child_process'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { loadUsers, saveUsers, hashPassword, verifyPassword, getUserByUsername, createUser, updateUser } from './userStorage.js'
@@ -22,8 +23,8 @@ app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true
 }))
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.json({ limit: '20mb' }))
+app.use(express.urlencoded({ extended: true, limit: '20mb' }))
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'irrigation_secret',
@@ -99,6 +100,55 @@ async function getCoordinates(location) {
     console.error('Geocoding Error:', error.message)
     return null
   }
+}
+
+function runCropStageInference(imageBase64, cropType) {
+  return new Promise((resolve, reject) => {
+    const scriptPath = join(__dirname, 'python_sim', 'crop_stage_inference.py')
+    const pythonCommand = process.env.PYTHON_PATH || 'python'
+
+    const pythonProcess = spawn(pythonCommand, [scriptPath], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    pythonProcess.stdout.on('data', (data) => {
+      stdout += data.toString()
+    })
+
+    pythonProcess.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
+    pythonProcess.on('error', (error) => {
+      reject(new Error(`Failed to start Python process: ${error.message}`))
+    })
+
+    pythonProcess.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr || `Crop stage inference failed with code ${code}`))
+        return
+      }
+
+      try {
+        const parsed = JSON.parse(stdout)
+        resolve(parsed)
+      } catch (error) {
+        reject(new Error(`Invalid response from inference script: ${error.message}`))
+      }
+    })
+
+    const payload = {
+      cropType,
+      imageBase64,
+      modelPath: process.env.CROP_STAGE_MODEL_PATH || '',
+    }
+
+    pythonProcess.stdin.write(JSON.stringify(payload))
+    pythonProcess.stdin.end()
+  })
 }
 
 // Generate irrigation recommendations based on weather
@@ -327,6 +377,31 @@ app.get('/api/weather/:location', async (req, res) => {
   }
 
   res.json({ location, ...coords, weather: weatherData })
+})
+
+app.post('/api/crop-stage/predict', async (req, res) => {
+  if (!req.session.user) {
+    return res.status(401).json({ error: 'Not authenticated' })
+  }
+
+  const cropType = req.session.user.crop
+  const { imageBase64 } = req.body
+
+  if (!cropType) {
+    return res.status(400).json({ error: 'Crop type is not set in profile' })
+  }
+
+  if (!imageBase64 || typeof imageBase64 !== 'string') {
+    return res.status(400).json({ error: 'imageBase64 is required' })
+  }
+
+  try {
+    const result = await runCropStageInference(imageBase64, cropType)
+    res.json(result)
+  } catch (error) {
+    console.error('Crop stage prediction error:', error)
+    res.status(500).json({ error: error.message || 'Crop stage prediction failed' })
+  }
 })
 
 // ===================== STATIC FILES & SERVER =====================

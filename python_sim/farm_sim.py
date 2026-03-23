@@ -270,12 +270,15 @@ class FarmSimulation:
 
             tile.moisture = max(0.0, min(100.0, tile.moisture))
 
+            # Frame-rate independent health model tuned for stable crop health.
             if tile.moisture < self.crop["optimal_min"]:
-                tile.health -= self.crop["dry_penalty"] * dt * 10
+                deficit = min(1.0, (self.crop["optimal_min"] - tile.moisture) / 25.0)
+                tile.health -= self.crop["dry_penalty"] * dt * 2.5 * deficit
             elif tile.moisture > self.crop["optimal_max"]:
-                tile.health -= self.crop["wet_penalty"] * dt * 10
+                excess = min(1.0, (tile.moisture - self.crop["optimal_max"]) / 25.0)
+                tile.health -= self.crop["wet_penalty"] * dt * 2.0 * excess
             else:
-                tile.health += 0.45 * dt * 10
+                tile.health += 0.9 * dt
 
             tile.health = max(0.0, min(100.0, tile.health))
 

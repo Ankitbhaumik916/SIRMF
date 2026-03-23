@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte'
   import { authStore } from '../stores/authStore'
+  import { languageStore, t } from '../stores/i18nStore'
 
   const dispatch = createEventDispatcher()
 
@@ -23,12 +24,13 @@
   }
 
   const menuItems = [
-    { id: 'dashboard', icon: '📊', label: 'Dashboard', color: 'blue' },
-    { id: 'weather', icon: '🌤️', label: 'Weather', color: 'cyan' },
-    { id: 'irrigation', icon: '💧', label: 'Irrigation', color: 'green' },
-    { id: 'farm', icon: '🌾', label: 'Farm Info', color: 'amber' },
-    { id: 'profile', icon: '👤', label: 'Profile', color: 'purple' },
-    { id: 'settings', icon: '⚙️', label: 'Settings', color: 'gray' },
+    { id: 'dashboard', icon: '📊', labelKey: 'sidebar.dashboard', color: 'blue' },
+    { id: 'weather', icon: '🌤️', labelKey: 'sidebar.weather', color: 'cyan' },
+    { id: 'irrigation', icon: '💧', labelKey: 'sidebar.irrigation', color: 'green' },
+    { id: 'crop-stage', icon: '🌱', labelKey: 'sidebar.cropStage', color: 'emerald' },
+    { id: 'farm', icon: '🌾', labelKey: 'sidebar.farmInfo', color: 'amber' },
+    { id: 'profile', icon: '👤', labelKey: 'sidebar.profile', color: 'purple' },
+    { id: 'settings', icon: '⚙️', labelKey: 'sidebar.settings', color: 'gray' },
   ]
 </script>
 
@@ -52,7 +54,7 @@
       <div class="flex items-center gap-3 mb-2">
         <div class="text-3xl">🌾</div>
         <div>
-          <h1 class="text-xl font-bold">Smart Farming</h1>
+          <h1 class="text-xl font-bold">{t('sidebar.smartFarming', $languageStore)}</h1>
           <p class="text-xs text-green-100">v2.0</p>
         </div>
       </div>
@@ -60,8 +62,8 @@
 
     <!-- User Info -->
     <div class="p-4 border-b border-green-700 mx-3 mt-3 rounded-lg bg-green-700/50">
-      <p class="text-xs text-green-100">Logged in as</p>
-      <p class="font-semibold truncate">{$authStore.user?.name || 'User'}</p>
+      <p class="text-xs text-green-100">{t('sidebar.loggedInAs', $languageStore)}</p>
+      <p class="font-semibold truncate">{$authStore.user?.name || t('sidebar.user', $languageStore)}</p>
       <p class="text-xs text-green-200">{$authStore.user?.farmSize || '-'} • {$authStore.user?.crop || '-'}</p>
     </div>
 
@@ -78,7 +80,7 @@
             }`}
           >
             <span class="text-xl">{item.icon}</span>
-            <span class="font-medium">{item.label}</span>
+            <span class="font-medium">{t(item.labelKey, $languageStore)}</span>
             {#if currentPage === item.id}
               <span class="ml-auto text-lg">→</span>
             {/if}
@@ -94,14 +96,14 @@
         class="w-full flex items-center gap-2 px-4 py-2 text-green-100 hover:bg-green-700/50 rounded-lg transition"
       >
         <span>👤</span>
-        <span>View Profile</span>
+        <span>{t('sidebar.viewProfile', $languageStore)}</span>
       </button>
       <button
         on:click={handleLogout}
         class="w-full flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium"
       >
         <span>🚪</span>
-        <span>Logout</span>
+        <span>{t('sidebar.logout', $languageStore)}</span>
       </button>
     </div>
   </aside>

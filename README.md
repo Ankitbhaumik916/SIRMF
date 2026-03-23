@@ -8,6 +8,20 @@
 
 SIRMF is a **comprehensive AI-powered smart irrigation management system** that combines web-based monitoring with an advanced desktop farming simulator. The system uses **Machine Learning (XGBoost, 98.5% accuracy)** for intelligent irrigation predictions and features **enhanced graphics** for an immersive farming experience.
 
+## 🆕 Latest Implemented Updates (March 2026)
+
+- **Live Farm Stats Sync**: Farm simulator now emits real-time aggregated stats (`avgMoisture`, `avgHealth`, farms needing irrigation, weather).
+- **Shared Stats Store**: Added centralized Svelte store so multiple pages consume the same live farm-state source.
+- **Irrigation Report Integration**:
+  - Report generation uses **live farm stats snapshot at click time**.
+  - Ensures each **Generate Report** action reflects current simulator state.
+- **Profile Integration**: Account Statistics now show live farm metrics (Avg Moisture, Avg Health, Needs Irrigation) instead of fixed placeholders.
+- **Crop Stage Detection (CNN + API)**:
+  - New web page for image upload and growth-stage inference.
+  - New backend endpoint to run Python inference from uploaded image data.
+- **App Internationalization + Settings**:
+  - Added language store, localized UI labels/messages, and a dedicated Settings page for language selection.
+
 ## ✨ Key Features
 
 ### 🤖 AI-Powered Irrigation System
@@ -123,21 +137,29 @@ SEPM/
 │   ├── 📂 pages/                        # Page components
 │   │   ├── Dashboard.svelte            # Main dashboard
 │   │   ├── FarmInfo.svelte             # Farm info + simulator (★ NEW)
+│   │   ├── IrrigationReport.svelte     # On-demand irrigation report (★ NEW)
+│   │   ├── CropStageDetection.svelte   # Crop stage image inference page (★ NEW)
 │   │   ├── Login.svelte                # Login page
 │   │   ├── Signup.svelte               # Registration
 │   │   ├── Profile.svelte              # User profile
+│   │   ├── Settings.svelte             # Language/settings page (★ NEW)
 │   │   └── Weather.svelte              # Weather page
 │   │
 │   ├── 📂 stores/                       # State management
 │   │   ├── authStore.js                # Authentication state
-│   │   └── weatherStore.js             # Weather state
+│   │   ├── weatherStore.js             # Weather state
+│   │   ├── i18nStore.js                # App localization state (★ NEW)
+│   │   └── farmStatsStore.js           # Live farm stats state (★ NEW)
 │   │
 │   └── 📂 utils/                        # Utilities
-│       └── farmingSimulation.js        # Enhanced canvas simulator (★ NEW)
+│       ├── farmingSimulation.js        # Enhanced canvas simulator (★ NEW)
+│       └── irrigationReporting.js      # Irrigation report builder (★ NEW)
 │
 ├── 📂 python_sim/                        # Desktop simulator + ML
 │   ├── 🎮 farm_sim.py                   # Main pygame simulator (★ ENHANCED)
 │   ├── 🎨 graphics_enhanced.py          # Graphics engine (★ NEW - 480 lines)
+│   ├── crop_stage_inference.py          # Crop-stage inference entrypoint (★ NEW)
+│   ├── train_crop_stage_cnn.py          # CNN training script (★ NEW)
 │   │
 │   ├── 🤖 ML System Files (★ NEW)
 │   ├── ml_dataset_generation.py        # Dataset generator (258 lines)
@@ -393,6 +415,8 @@ const wetBlue = '#2D508C';
 - `GET /dashboard` - Main dashboard (requires auth)
 - `GET /profile` - User profile (requires auth)
 - `GET /farm-info` - Farm info page (requires auth)
+- `GET /api/dashboard/data` - Dashboard data for report generation (requires auth)
+- `POST /api/crop-stage/predict` - Crop-stage prediction from uploaded image (requires auth)
 
 ## 🚧 Future Enhancements
 

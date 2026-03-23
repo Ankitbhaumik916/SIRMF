@@ -1,11 +1,11 @@
 <script>
   import { authStore } from '../stores/authStore';
   import FarmingSimulation from '../components/FarmingSimulation.svelte';
+  import { languageStore, t } from '../stores/i18nStore'
+  import { farmStatsStore, setFarmStats } from '../stores/farmStatsStore'
 
   let showWebSimulation = true;
   let showStats = true;
-  let avgMoisture = 55;
-  let avgHealth = 75;
   let desktopCommand = `python python_sim/farm_sim.py --username ${authStore?.user?.username || 'YOUR_USERNAME'}`;
 </script>
 
@@ -14,8 +14,8 @@
     
     <!-- Header -->
     <div style="margin-bottom: 24px;">
-      <h1 style="margin: 0 0 8px 0; color: #1f2937; font-size: 2rem;">🌾 Smart Farm Simulator</h1>
-      <p style="margin: 0; color: #6b7280; font-size: 0.95rem;">Real-time farming simulation with AI irrigation management</p>
+      <h1 style="margin: 0 0 8px 0; color: #1f2937; font-size: 2rem;">🌾 {t('farmInfo.title', $languageStore)}</h1>
+      <p style="margin: 0; color: #6b7280; font-size: 0.95rem;">{t('farmInfo.subtitle', $languageStore)}</p>
     </div>
 
     {#if $authStore?.user}
@@ -38,7 +38,10 @@
             Use <strong>WASD</strong> or <strong>Arrow Keys</strong> to move. Watch AI make irrigation decisions in real-time.
           </p>
           
-          <FarmingSimulation userLandArea={parseFloat($authStore.user.farmSize) || 3} />
+          <FarmingSimulation
+            userLandArea={parseFloat($authStore.user.farmSize) || 3}
+            onStatsUpdate={(stats) => setFarmStats(stats)}
+          />
         </div>
 
         <!-- Right: Info Panel -->
@@ -76,10 +79,10 @@
               <div style="margin-bottom: 12px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                   <p style="margin: 0; color: #6b7280; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Moisture</p>
-                  <p style="margin: 0; color: #1f2937; font-weight: 700; font-size: 0.875rem;">{avgMoisture}%</p>
+                  <p style="margin: 0; color: #1f2937; font-weight: 700; font-size: 0.875rem;">{$farmStatsStore.avgMoisture}%</p>
                 </div>
                 <div style="height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
-                  <div style="height: 100%; width: {avgMoisture}%; background: linear-gradient(90deg, #60a5fa, #3b82f6); transition: width 0.3s ease;"></div>
+                  <div style="height: 100%; width: {$farmStatsStore.avgMoisture}%; background: linear-gradient(90deg, #60a5fa, #3b82f6); transition: width 0.3s ease;"></div>
                 </div>
               </div>
               
@@ -87,10 +90,10 @@
               <div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
                   <p style="margin: 0; color: #6b7280; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Health</p>
-                  <p style="margin: 0; color: #1f2937; font-weight: 700; font-size: 0.875rem;">{avgHealth}%</p>
+                  <p style="margin: 0; color: #1f2937; font-weight: 700; font-size: 0.875rem;">{$farmStatsStore.avgHealth}%</p>
                 </div>
                 <div style="height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
-                  <div style="height: 100%; width: {avgHealth}%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.3s ease;"></div>
+                  <div style="height: 100%; width: {$farmStatsStore.avgHealth}%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.3s ease;"></div>
                 </div>
               </div>
             </div>

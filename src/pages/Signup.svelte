@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte'
   import { signup } from '../stores/authStore'
+  import { languageStore, t } from '../stores/i18nStore'
 
   const dispatch = createEventDispatcher()
 
@@ -94,8 +95,8 @@
       <!-- Header -->
       <div class="bg-gradient-to-r from-blue-500 to-cyan-600 px-8 py-6 text-center">
         <div class="text-4xl mb-2">🚜</div>
-        <h1 class="text-2xl font-bold text-white">Create Your Farm Account</h1>
-        <p class="text-blue-50 text-sm">Join Smart Farming Community - Step {step} of 2</p>
+        <h1 class="text-2xl font-bold text-white">{t('signup.title', $languageStore)}</h1>
+        <p class="text-blue-50 text-sm">{t('signup.step', $languageStore, { step })}</p>
       </div>
 
       <!-- Progress Bar -->
@@ -134,7 +135,7 @@
         {#if step === 1}
           <div class="space-y-4 mb-6">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">{t('signup.username', $languageStore)}</label>
               <input
                 type="text"
                 bind:value={formData.username}
@@ -146,7 +147,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">{t('signup.password', $languageStore)}</label>
               {#if showPassword}
                 <input
                   type="text"
@@ -169,7 +170,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">{t('signup.confirmPassword', $languageStore)}</label>
               {#if showPassword}
                 <input
                   type="text"
@@ -198,7 +199,7 @@
                 disabled={loading}
                 class="rounded"
               />
-              <span class="ml-2">Show password</span>
+              <span class="ml-2">{t('signup.showPassword', $languageStore)}</span>
             </label>
           </div>
 
@@ -207,14 +208,14 @@
               on:click={() => dispatch('navigate', 'login')}
               class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition"
             >
-              Back to Login
+              {t('signup.backToLogin', $languageStore)}
             </button>
             <button
               on:click={nextStep}
               disabled={loading}
               class="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-50"
             >
-              Next: Farm Details →
+              {t('signup.next', $languageStore)}
             </button>
           </div>
         {/if}
@@ -223,7 +224,7 @@
         {#if step === 2}
           <div class="space-y-4 mb-6">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Farmer Name *</label>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">{t('signup.farmerName', $languageStore)}</label>
               <input
                 type="text"
                 bind:value={formData.name}
@@ -235,7 +236,7 @@
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Farm Size *</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">{t('signup.farmSize', $languageStore)}</label>
                 <input
                   type="text"
                   bind:value={formData.farmSize}
@@ -245,7 +246,7 @@
                 />
               </div>
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Primary Crop *</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">{t('signup.primaryCrop', $languageStore)}</label>
                 <select
                   bind:value={formData.crop}
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -259,7 +260,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">{t('signup.location', $languageStore)}</label>
               <input
                 type="text"
                 bind:value={formData.location}
@@ -277,14 +278,14 @@
               disabled={loading}
               class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition"
             >
-              ← Back
+              {t('signup.back', $languageStore)}
             </button>
             <button
               on:click={handleSignup}
               disabled={loading || success}
               class="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white font-bold py-3 rounded-lg transition disabled:opacity-50"
             >
-              {loading ? 'Creating Account...' : 'Create Account'}
+              {loading ? t('signup.creatingAccount', $languageStore) : t('signup.createAccount', $languageStore)}
             </button>
           </div>
         {/if}
@@ -293,12 +294,12 @@
       <!-- Footer -->
       <div class="bg-gray-50 px-8 py-4 border-t border-gray-100">
         <p class="text-center text-gray-600 text-sm">
-          Already have an account?
+          {t('signup.alreadyHave', $languageStore)}
           <button
             on:click={() => dispatch('navigate', 'login')}
             class="text-blue-600 hover:text-blue-700 font-semibold"
           >
-            Login
+            {t('signup.login', $languageStore)}
           </button>
         </p>
       </div>

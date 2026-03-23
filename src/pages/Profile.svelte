@@ -1,6 +1,8 @@
 <script>
   import { createEventDispatcher } from 'svelte'
   import { authStore } from '../stores/authStore'
+  import { languageStore, t } from '../stores/i18nStore'
+  import { farmStatsStore } from '../stores/farmStatsStore'
 
   const dispatch = createEventDispatcher()
 
@@ -62,8 +64,8 @@
   <header class="bg-white shadow-md md:rounded-lg md:mb-8">
     <div class="px-8 py-6 md:flex md:items-center md:justify-between">
       <div>
-        <h1 class="text-3xl font-bold text-gray-900">👤 Your Profile</h1>
-        <p class="text-gray-500 mt-1">Manage your farm information</p>
+        <h1 class="text-3xl font-bold text-gray-900">👤 {t('profile.title', $languageStore)}</h1>
+        <p class="text-gray-500 mt-1">{t('profile.subtitle', $languageStore)}</p>
       </div>
     </div>
   </header>
@@ -72,7 +74,7 @@
   <main class="max-w-2xl mx-auto px-4 md:px-0">
     {#if success}
       <div class="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg">
-        <p class="text-green-700 font-semibold">✓ Profile updated successfully!</p>
+        <p class="text-green-700 font-semibold">✓ {t('profile.updated', $languageStore)}</p>
       </div>
     {/if}
 
@@ -97,37 +99,37 @@
           <!-- View Mode -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div>
-              <h3 class="text-lg font-semibold text-gray-700 mb-4">Personal Information</h3>
+              <h3 class="text-lg font-semibold text-gray-700 mb-4">{t('profile.personalInfo', $languageStore)}</h3>
               <div class="space-y-4">
                 <div>
-                  <p class="text-gray-600 text-sm">Full Name</p>
+                  <p class="text-gray-600 text-sm">{t('profile.fullName', $languageStore)}</p>
                   <p class="text-xl font-semibold text-gray-900">{$authStore.user.name}</p>
                 </div>
                 <div>
-                  <p class="text-gray-600 text-sm">Username</p>
+                  <p class="text-gray-600 text-sm">{t('profile.username', $languageStore)}</p>
                   <p class="text-xl font-semibold text-gray-900">{$authStore.user.username}</p>
                 </div>
                 <div>
-                  <p class="text-gray-600 text-sm">Location</p>
-                  <p class="text-xl font-semibold text-gray-900">{$authStore.user.location || 'Not set'}</p>
+                  <p class="text-gray-600 text-sm">{t('profile.location', $languageStore)}</p>
+                  <p class="text-xl font-semibold text-gray-900">{$authStore.user.location || t('profile.notSet', $languageStore)}</p>
                 </div>
               </div>
             </div>
 
             <div>
-              <h3 class="text-lg font-semibold text-gray-700 mb-4">Farm Information</h3>
+              <h3 class="text-lg font-semibold text-gray-700 mb-4">{t('profile.farmInfo', $languageStore)}</h3>
               <div class="space-y-4">
                 <div>
-                  <p class="text-gray-600 text-sm">Farm Size</p>
+                  <p class="text-gray-600 text-sm">{t('profile.farmSize', $languageStore)}</p>
                   <p class="text-xl font-semibold text-green-600">{$authStore.user.farmSize}</p>
                 </div>
                 <div>
-                  <p class="text-gray-600 text-sm">Primary Crop</p>
+                  <p class="text-gray-600 text-sm">{t('profile.primaryCrop', $languageStore)}</p>
                   <p class="text-xl font-semibold text-green-600">{$authStore.user.crop}</p>
                 </div>
                 <div>
-                  <p class="text-gray-600 text-sm">Account Status</p>
-                  <p class="text-xl font-semibold text-green-600">✓ Active</p>
+                  <p class="text-gray-600 text-sm">{t('profile.accountStatus', $languageStore)}</p>
+                  <p class="text-xl font-semibold text-green-600">✓ {t('profile.active', $languageStore)}</p>
                 </div>
               </div>
             </div>
@@ -138,16 +140,16 @@
             <h3 class="text-lg font-semibold text-gray-700 mb-4">Account Statistics</h3>
             <div class="grid grid-cols-3 gap-4">
               <div class="bg-blue-50 rounded-lg p-6 text-center">
-                <p class="text-gray-600 text-sm">Days Active</p>
-                <p class="text-3xl font-bold text-blue-600 mt-2">1</p>
+                <p class="text-gray-600 text-sm">Avg Moisture</p>
+                <p class="text-3xl font-bold text-blue-600 mt-2">{$farmStatsStore.avgMoisture}%</p>
               </div>
               <div class="bg-green-50 rounded-lg p-6 text-center">
-                <p class="text-gray-600 text-sm">Irrigation Cycles</p>
-                <p class="text-3xl font-bold text-green-600 mt-2">12</p>
+                <p class="text-gray-600 text-sm">Avg Health</p>
+                <p class="text-3xl font-bold text-green-600 mt-2">{$farmStatsStore.avgHealth}%</p>
               </div>
               <div class="bg-purple-50 rounded-lg p-6 text-center">
-                <p class="text-gray-600 text-sm">Water Saved (est.)</p>
-                <p class="text-3xl font-bold text-purple-600 mt-2">24%</p>
+                <p class="text-gray-600 text-sm">Needs Irrigation</p>
+                <p class="text-3xl font-bold text-purple-600 mt-2">{$farmStatsStore.farmsNeedingIrrigation}</p>
               </div>
             </div>
           </div>
@@ -158,16 +160,16 @@
               on:click={() => (isEditing = true)}
               class="px-6 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition"
             >
-              ✏️ Edit Profile
+              ✏️ {t('profile.editProfile', $languageStore)}
             </button>
           </div>
         {:else}
           <!-- Edit Mode -->
-          <h3 class="text-lg font-semibold text-gray-700 mb-6">Edit Farm Information</h3>
+          <h3 class="text-lg font-semibold text-gray-700 mb-6">{t('profile.editFarmInfo', $languageStore)}</h3>
 
           <div class="space-y-6 mb-8">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">{t('profile.fullName', $languageStore)}</label>
               <input
                 type="text"
                 bind:value={editData.name}
@@ -178,7 +180,7 @@
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Farm Size</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">{t('profile.farmSize', $languageStore)}</label>
                 <input
                   type="text"
                   bind:value={editData.farmSize}
@@ -187,7 +189,7 @@
                 />
               </div>
               <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Primary Crop</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">{t('profile.primaryCrop', $languageStore)}</label>
                 <select
                   bind:value={editData.crop}
                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -201,7 +203,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">{t('profile.location', $languageStore)}</label>
               <input
                 type="text"
                 bind:value={editData.location}
@@ -209,7 +211,7 @@
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={loading}
               />
-              <p class="text-xs text-gray-500 mt-1">Used for weather detection</p>
+              <p class="text-xs text-gray-500 mt-1">{t('profile.weatherDetection', $languageStore)}</p>
             </div>
           </div>
 
@@ -220,14 +222,14 @@
               disabled={loading}
               class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition"
             >
-              Cancel
+              {t('common.cancel', $languageStore)}
             </button>
             <button
               on:click={handleSaveProfile}
               disabled={loading}
               class="flex-1 px-4 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('profile.saving', $languageStore) : t('profile.saveChanges', $languageStore)}
             </button>
           </div>
         {/if}

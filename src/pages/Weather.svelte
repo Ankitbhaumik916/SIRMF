@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import { authStore } from '../stores/authStore'
   import { weatherStore, fetchWeatherData } from '../stores/weatherStore'
+  import { languageStore, t } from '../stores/i18nStore'
 
   let location = $authStore.user?.location || ''
   let tempLocation = location
@@ -45,8 +46,8 @@
   <!-- Header -->
   <header class="bg-white shadow-md sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-      <h1 class="text-3xl font-bold text-gray-900">🌤️ Weather Dashboard</h1>
-      <p class="text-sm text-gray-500 mt-1">Real-time weather information for your location</p>
+      <h1 class="text-3xl font-bold text-gray-900">🌤️ {t('weather.title', $languageStore)}</h1>
+      <p class="text-sm text-gray-500 mt-1">{t('weather.subtitle', $languageStore)}</p>
     </div>
   </header>
 
@@ -54,7 +55,7 @@
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Search Section -->
     <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-      <label class="block text-sm font-medium text-gray-700 mb-3">Enter Location</label>
+      <label class="block text-sm font-medium text-gray-700 mb-3">{t('weather.enterLocation', $languageStore)}</label>
       <div class="flex gap-3">
         <input
           type="text"
@@ -68,12 +69,12 @@
           disabled={$weatherStore.loading}
           class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition font-semibold"
         >
-          {$weatherStore.loading ? '🔄 Searching...' : 'Search'}
+          {$weatherStore.loading ? `🔄 ${t('weather.searching', $languageStore)}` : t('common.search', $languageStore)}
         </button>
       </div>
       {#if $weatherStore.lastUpdated}
         <p class="text-xs text-gray-500 mt-2">
-          Last updated: {$weatherStore.lastUpdated}
+          {t('weather.lastUpdated', $languageStore)} {$weatherStore.lastUpdated}
         </p>
       {/if}
     </div>
@@ -81,7 +82,7 @@
     <!-- Error Message -->
     {#if $weatherStore.error}
       <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-        <p class="text-red-700 font-semibold">⚠️ Error: {$weatherStore.error}</p>
+        <p class="text-red-700 font-semibold">⚠️ {t('weather.error', $languageStore)}: {$weatherStore.error}</p>
       </div>
     {/if}
 
@@ -90,7 +91,7 @@
       <div class="flex items-center justify-center py-12">
         <div class="text-center">
           <div class="mb-4 text-5xl animate-bounce">🌤️</div>
-          <p class="text-gray-600">Fetching weather data...</p>
+          <p class="text-gray-600">{t('weather.fetching', $languageStore)}</p>
         </div>
       </div>
     {:else if $weatherStore.data}
@@ -107,21 +108,21 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
           <!-- Temperature Section -->
           <div class="bg-white bg-opacity-20 rounded-lg p-6 backdrop-blur">
-            <p class="text-blue-100 text-sm mb-2">Temperature</p>
+            <p class="text-blue-100 text-sm mb-2">{t('weather.temperature', $languageStore)}</p>
             <p class="text-6xl font-bold mb-2">{$weatherStore.data.temp}°C</p>
-            <p class="text-blue-100">Feels like {$weatherStore.data.feelsLike}°C</p>
+            <p class="text-blue-100">{t('weather.feelsLike', $languageStore)} {$weatherStore.data.feelsLike}°C</p>
           </div>
 
           <!-- Condition Summary -->
           <div class="bg-white bg-opacity-20 rounded-lg p-6 backdrop-blur">
-            <p class="text-blue-100 text-sm mb-4">Weather Condition</p>
+            <p class="text-blue-100 text-sm mb-4">{t('weather.condition', $languageStore)}</p>
             <div class="space-y-3">
               <div class="flex justify-between items-center">
-                <span class="text-blue-100">Humidity</span>
+                <span class="text-blue-100">{t('weather.humidity', $languageStore)}</span>
                 <span class="text-2xl font-bold">{$weatherStore.data.humidity}%</span>
               </div>
               <div class="flex justify-between items-center">
-                <span class="text-blue-100">Wind Speed</span>
+                <span class="text-blue-100">{t('weather.windSpeed', $languageStore)}</span>
                 <span class="text-2xl font-bold">{$weatherStore.data.windSpeed} km/h</span>
               </div>
             </div>
@@ -171,7 +172,7 @@
 
       <!-- Irrigation Recommendations -->
       <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-bold text-gray-900 mb-4">📋 Irrigation Recommendations</h3>
+        <h3 class="text-lg font-bold text-gray-900 mb-4">📋 {t('weather.recommendations', $languageStore)}</h3>
         <div class="space-y-3">
           {#if $weatherStore.data.humidity < 40}
             <div class="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">

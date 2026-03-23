@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte'
   import { login } from '../stores/authStore'
+  import { languageStore, t } from '../stores/i18nStore'
 
   const dispatch = createEventDispatcher()
 
@@ -13,7 +14,7 @@
   async function handleLogin() {
     error = ''
     if (!username || !password) {
-      error = 'Please enter username and password'
+      error = t('login.errorRequired', $languageStore)
       return
     }
 
@@ -23,7 +24,7 @@
     if (result.success) {
       dispatch('navigate', 'dashboard')
     } else {
-      error = result.error || 'Login failed'
+      error = result.error || t('login.errorFailed', $languageStore)
     }
     loading = false
   }
@@ -46,8 +47,8 @@
       <!-- Header -->
       <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-8 text-center">
         <div class="text-5xl mb-3">🌾</div>
-        <h1 class="text-3xl font-bold text-white mb-2">Smart Farming</h1>
-        <p class="text-green-50">Intelligent Irrigation Management</p>
+        <h1 class="text-3xl font-bold text-white mb-2">{t('login.header', $languageStore)}</h1>
+        <p class="text-green-50">{t('login.subheader', $languageStore)}</p>
       </div>
 
       <!-- Form -->
@@ -61,14 +62,14 @@
         <form on:submit|preventDefault={handleLogin}>
         <div class="mb-6">
           <label for="username" class="block text-sm font-semibold text-gray-700 mb-2">
-            Username
+            {t('login.username', $languageStore)}
           </label>
           <input
             id="username"
             type="text"
             bind:value={username}
             on:keypress={handleKeyPress}
-            placeholder="Enter your username"
+            placeholder={t('login.usernamePlaceholder', $languageStore)}
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             disabled={loading}
           />
@@ -76,7 +77,7 @@
 
         <div class="mb-6">
           <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">
-            Password
+            {t('login.password', $languageStore)}
           </label>
           <div class="relative">
             {#if showPassword}
@@ -85,7 +86,7 @@
                 type="text"
                 bind:value={password}
                 on:keypress={handleKeyPress}
-                placeholder="Enter your password"
+                placeholder={t('login.passwordPlaceholder', $languageStore)}
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 disabled={loading}
               />
@@ -95,7 +96,7 @@
                 type="password"
                 bind:value={password}
                 on:keypress={handleKeyPress}
-                placeholder="Enter your password"
+                placeholder={t('login.passwordPlaceholder', $languageStore)}
                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 disabled={loading}
               />
@@ -115,24 +116,24 @@
           disabled={loading}
           class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Logging in...' : 'Login'}
+          {loading ? t('login.loggingIn', $languageStore) : t('login.button', $languageStore)}
         </button>
         </form>
 
         <p class="text-center text-gray-600 text-sm mt-4">
-          Demo: username=<span class="font-mono font-semibold">demo</span>, password=<span class="font-mono font-semibold">demo123</span>
+          {t('login.demo', $languageStore)}
         </p>
       </div>
 
       <!-- Footer -->
       <div class="bg-gray-50 px-8 py-4 border-t border-gray-100">
         <p class="text-center text-gray-600 text-sm">
-          Don't have an account?
+          {t('login.noAccount', $languageStore)}
           <button
             on:click={() => dispatch('navigate', 'signup')}
             class="text-green-600 hover:text-green-700 font-semibold"
           >
-            Sign up
+            {t('login.signup', $languageStore)}
           </button>
         </p>
       </div>

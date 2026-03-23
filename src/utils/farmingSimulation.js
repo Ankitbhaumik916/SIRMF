@@ -47,8 +47,8 @@ class FarmTile {
       this.irrigationActive = false;
     }
 
-    // Update crop health based on moisture
-    this.updateCropHealth();
+    // Update crop health with frame-rate independent timing
+    this.updateCropHealth(deltaTimeSeconds);
   }
 
   getEvaporationRate(weatherState) {
@@ -64,17 +64,23 @@ class FarmTile {
     }
   }
 
-  updateCropHealth() {
-    const optimalMoisture = { min: 40, max: 70 };
-    const healthChange = 0.5;
+  updateCropHealth(deltaTimeSeconds) {
+    const optimalMoisture = { min: 45, max: 75 };
+    let healthDeltaPerSecond = 0;
 
+    // Strong recovery in healthy moisture range.
     if (this.soilMoisture >= optimalMoisture.min && this.soilMoisture <= optimalMoisture.max) {
-      this.cropHealth = Math.min(100, this.cropHealth + healthChange * 0.1);
-    } else if (this.soilMoisture < 20 || this.soilMoisture > 85) {
-      this.cropHealth = Math.max(0, this.cropHealth - healthChange * 0.2);
+      healthDeltaPerSecond = 2.5;
+    // Heavy penalty only in extreme moisture conditions.
+    } else if (this.soilMoisture < 25 || this.soilMoisture > 85) {
+      healthDeltaPerSecond = -1.2;
+    // Mild penalty in near-suboptimal range.
     } else {
-      this.cropHealth = Math.max(0, this.cropHealth - healthChange * 0.05);
+      healthDeltaPerSecond = -0.35;
     }
+
+    this.cropHealth += healthDeltaPerSecond * deltaTimeSeconds;
+    this.cropHealth = Math.max(0, Math.min(100, this.cropHealth));
   }
 
   // Smooth color interpolation based on moisture
@@ -176,6 +182,13 @@ class IrrigationController {
     const farmlands = this.farms.filter((farm) => farm.tileType === 'farmland');
     if (farmlands.length === 0) return 0;
     const total = farmlands.reduce((sum, farm) => sum + farm.soilMoisture, 0);
+    return Math.round(total / farmlands.length);
+  }
+
+  getAverageCropHealth() {
+    const farmlands = this.farms.filter((farm) => farm.tileType === 'farmland');
+    if (farmlands.length === 0) return 0;
+    const total = farmlands.reduce((sum, farm) => sum + farm.cropHealth, 0);
     return Math.round(total / farmlands.length);
   }
 
@@ -542,6 +555,7 @@ class FarmingSimulation {
     this.selectedFarm = null;
     this.lastFrameTime = 0;
     this.onFarmInfoCallback = null;
+    this.onFarmStatsCallback = null;
 
     this.init();
   }
@@ -673,6 +687,7 @@ class FarmingSimulation {
     const totalFarms = this.irrigationController.getTotalFarms();
     const farmsNeedingIrrigation = this.irrigationController.getFarmsNeedingIrrigation();
     const avgMoisture = this.irrigationController.getAveragesoilMoisture();
+    const avgHealth = this.irrigationController.getAverageCropHealth();
 
     dashboard.innerHTML = `
       <div class="dashboard-item">
@@ -692,17 +707,32 @@ class FarmingSimulation {
         <span class="value">${avgMoisture}%</span>
       </div>
     `;
+
+    if (this.onFarmStatsCallback) {
+      this.onFarmStatsCallback({
+        totalFarms,
+        farmsNeedingIrrigation,
+        avgMoisture,
+        avgHealth,
+        currentWeather: this.weather.currentWeather,
+      });
+    }
   }
 
   setFarmInfoCallback(callback) {
     this.onFarmInfoCallback = callback;
   }
 
+  setFarmStatsCallback(callback) {
+    this.onFarmStatsCallback = callback;
+  }
+
   getFarmStats() {
     return {
       totalFarms: this.irrigationController.getTotalFarms(),
       farmsNeedingIrrigation: this.irrigationController.getFarmsNeedingIrrigation(),
-      averageMoisture: this.irrigationController.getAveragesoilMoisture(),
+      avgMoisture: this.irrigationController.getAveragesoilMoisture(),
+      avgHealth: this.irrigationController.getAverageCropHealth(),
       currentWeather: this.weather.currentWeather,
     };
   }

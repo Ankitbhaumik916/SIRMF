@@ -4,10 +4,14 @@
   import Login from './pages/Login.svelte'
   import Signup from './pages/Signup.svelte'
   import Dashboard from './pages/Dashboard.svelte'
+  import IrrigationReport from './pages/IrrigationReport.svelte'
   import Profile from './pages/Profile.svelte'
   import Weather from './pages/Weather.svelte'
   import FarmInfo from './pages/FarmInfo.svelte'
+  import CropStageDetection from './pages/CropStageDetection.svelte'
+  import Settings from './pages/Settings.svelte'
   import Sidebar from './components/Sidebar.svelte'
+  import { languageStore, t } from './stores/i18nStore'
 
   let currentPage = 'loading'
 
@@ -37,8 +41,8 @@
   <div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
     <div class="text-center">
       <div class="mb-4 text-5xl animate-bounce">🌾</div>
-      <h2 class="text-2xl font-bold text-gray-700 mb-2">Smart Farming System</h2>
-      <p class="text-gray-500">Loading...</p>
+      <h2 class="text-2xl font-bold text-gray-700 mb-2">{t('app.title', $languageStore)}</h2>
+      <p class="text-gray-500">{t('app.loading', $languageStore)}</p>
     </div>
   </div>
 {:else if !$authStore.isAuthenticated}
@@ -58,17 +62,13 @@
       {:else if currentPage === 'weather'}
         <Weather on:navigate={handleNavigation} />
       {:else if currentPage === 'irrigation'}
-        <div class="p-8">
-          <h1 class="text-3xl font-bold mb-4">💧 Irrigation Management</h1>
-          <p class="text-gray-600">Irrigation management page coming soon...</p>
-        </div>
+        <IrrigationReport />
+      {:else if currentPage === 'crop-stage'}
+        <CropStageDetection />
       {:else if currentPage === 'farm'}
         <FarmInfo />
       {:else if currentPage === 'settings'}
-        <div class="p-8">
-          <h1 class="text-3xl font-bold mb-4">⚙️ Settings</h1>
-          <p class="text-gray-600">Settings page coming soon...</p>
-        </div>
+        <Settings />
       {/if}
     </main>
   </div>
