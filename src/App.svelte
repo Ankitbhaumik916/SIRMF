@@ -9,6 +9,7 @@
   import Weather from './pages/Weather.svelte'
   import FarmInfo from './pages/FarmInfo.svelte'
   import CropStageDetection from './pages/CropStageDetection.svelte'
+  import SoilCheck from './pages/SoilCheck.svelte'
   import Settings from './pages/Settings.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import { languageStore, t } from './stores/i18nStore'
@@ -65,6 +66,8 @@
         <IrrigationReport />
       {:else if currentPage === 'crop-stage'}
         <CropStageDetection />
+      {:else if currentPage === 'soil-check'}
+        <SoilCheck />
       {:else if currentPage === 'farm'}
         <FarmInfo />
       {:else if currentPage === 'settings'}

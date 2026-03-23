@@ -31,6 +31,7 @@ const en = {
   'sidebar.weather': 'Weather',
   'sidebar.irrigation': 'Irrigation',
   'sidebar.cropStage': 'Crop Stage AI',
+  'sidebar.soilCheck': 'Soil Check',
   'sidebar.farmInfo': 'Farm Info',
   'sidebar.profile': 'Profile',
   'sidebar.settings': 'Settings',

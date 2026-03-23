@@ -192,6 +192,7 @@ app.post('/api/auth/login', (req, res) => {
       name: user.name,
       farmSize: user.farmSize,
       crop: user.crop,
+      soilType: user.soilType || 'Loamy',
       location: user.location,
       lat: user.lat,
       lon: user.lon,
@@ -206,6 +207,7 @@ app.post('/api/auth/login', (req, res) => {
       name: 'Farmer Ram',
       farmSize: '1.5 Acre',
       crop: 'Tomato',
+      soilType: 'Loamy',
       location: 'Nashik, Maharashtra',
       lat: 19.9975,
       lon: 73.7898,
@@ -241,6 +243,7 @@ app.post('/api/auth/signup', (req, res) => {
     name,
     farmSize,
     crop,
+    soilType: 'Loamy',
     location: location || 'India',
     passwordHash: hashPassword(password),
     lat: null,
@@ -274,13 +277,14 @@ app.post('/api/auth/update-profile', (req, res) => {
     return res.status(401).json({ error: 'Not authenticated' })
   }
 
-  const { name, farmSize, crop, location } = req.body
+  const { name, farmSize, crop, soilType, location } = req.body
   const username = req.session.user.username
 
   const updates = {}
   if (name) updates.name = name
   if (farmSize) updates.farmSize = farmSize
   if (crop) updates.crop = crop
+  if (soilType) updates.soilType = soilType
   if (location) updates.location = location
 
   if (updateUser(username, updates, users)) {

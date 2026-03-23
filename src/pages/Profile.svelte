@@ -11,6 +11,7 @@
     name: $authStore.user.name,
     farmSize: $authStore.user.farmSize,
     crop: $authStore.user.crop,
+    soilType: $authStore.user.soilType || 'Loamy',
     location: $authStore.user.location,
   }
   let error = ''
@@ -18,6 +19,7 @@
   let loading = false
 
   const crops = ['Tomato', 'Rice', 'Wheat', 'Corn', 'Sugarcane', 'Cotton', 'Potato', 'Onion']
+  const soilTypes = ['Sandy', 'Loamy', 'Clay', 'Silty', 'Peaty', 'Chalky']
 
   async function handleSaveProfile() {
     error = ''
@@ -34,6 +36,10 @@
       const result = await response.json()
 
       if (response.ok) {
+        authStore.update((state) => ({
+          ...state,
+          user: result.user || { ...state.user, ...editData },
+        }))
         success = true
         isEditing = false
         setTimeout(() => (success = false), 3000)
@@ -52,6 +58,7 @@
       name: $authStore.user.name,
       farmSize: $authStore.user.farmSize,
       crop: $authStore.user.crop,
+      soilType: $authStore.user.soilType || 'Loamy',
       location: $authStore.user.location,
     }
     isEditing = false
@@ -131,6 +138,10 @@
                   <p class="text-gray-600 text-sm">{t('profile.accountStatus', $languageStore)}</p>
                   <p class="text-xl font-semibold text-green-600">✓ {t('profile.active', $languageStore)}</p>
                 </div>
+                <div>
+                  <p class="text-gray-600 text-sm">Soil Type</p>
+                  <p class="text-xl font-semibold text-green-600">{$authStore.user.soilType || 'Loamy'}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -200,6 +211,19 @@
                   {/each}
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Soil Type</label>
+              <select
+                bind:value={editData.soilType}
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={loading}
+              >
+                {#each soilTypes as soilType}
+                  <option value={soilType}>{soilType}</option>
+                {/each}
+              </select>
             </div>
 
             <div>

@@ -28,6 +28,7 @@
     { id: 'weather', icon: '🌤️', labelKey: 'sidebar.weather', color: 'cyan' },
     { id: 'irrigation', icon: '💧', labelKey: 'sidebar.irrigation', color: 'green' },
     { id: 'crop-stage', icon: '🌱', labelKey: 'sidebar.cropStage', color: 'emerald' },
+    { id: 'soil-check', icon: '🧪', labelKey: 'sidebar.soilCheck', color: 'teal' },
     { id: 'farm', icon: '🌾', labelKey: 'sidebar.farmInfo', color: 'amber' },
     { id: 'profile', icon: '👤', labelKey: 'sidebar.profile', color: 'purple' },
     { id: 'settings', icon: '⚙️', labelKey: 'sidebar.settings', color: 'gray' },
