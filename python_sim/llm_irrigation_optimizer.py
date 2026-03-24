@@ -1,59 +1,39 @@
 import argparse
-import os
+import base64
+import json
+from pathlib import Path
 
-from peft import AutoPeftModelForCausalLM
-from transformers import AutoTokenizer
-
-
-DEFAULT_ADAPTER_ID = "persadian/CropSeek-LLM"
-DEFAULT_BASE_ID = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
-DEFAULT_PROMPT = (
-    "You are an irrigation optimization assistant.\n"
-    "Given: crop=rice, area_acres=3.2, soil_moisture=31, temp_c=34, humidity=42, rainfall_mm=0, forecast='hot_dry_48h'\n"
-    "Return strict JSON with keys: irrigate_now (bool), water_liters (number), priority_zones (array), reasoning (string)."
-)
+from crop_stage_inference import predict_crop_stage
 
 
-def load_model_and_tokenizer(adapter_id: str, base_id: str, device_map: str, hf_token: str | None = None):
-    tokenizer = AutoTokenizer.from_pretrained(base_id, token=hf_token)
-    model = AutoPeftModelForCausalLM.from_pretrained(
-        adapter_id,
-        base_model_name_or_path=base_id,
-        torch_dtype="auto",
-        device_map=device_map,
-        token=hf_token,
-    )
-    return model, tokenizer
+DEFAULT_CHECKPOINT_PATH = Path(__file__).resolve().parent.parent / "best.pt"
 
 
-def generate_irrigation_json(model, tokenizer, prompt: str, max_new_tokens: int = 220) -> str:
-    inputs = tokenizer(prompt, return_tensors="pt")
-    inputs = inputs.to(model.device)
-    output = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
-    return tokenizer.decode(output[0], skip_special_tokens=True)
+def _image_file_to_base64(image_path: Path) -> str:
+    return base64.b64encode(image_path.read_bytes()).decode("utf-8")
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run CropSeek LLM irrigation optimization inference")
-    parser.add_argument("--adapter-id", default=DEFAULT_ADAPTER_ID)
-    parser.add_argument("--base-id", default=DEFAULT_BASE_ID)
-    parser.add_argument("--device-map", default="auto")
-    parser.add_argument("--max-new-tokens", type=int, default=220)
-    parser.add_argument("--prompt", default=DEFAULT_PROMPT)
-    parser.add_argument(
-        "--hf-token",
-        default=None,
-        help="Hugging Face token. If omitted, script uses HF_TOKEN or HUGGINGFACE_HUB_TOKEN env var.",
-    )
+    parser = argparse.ArgumentParser(description="Rice crop stage detection using local best.pt")
+    parser.add_argument("--image-path", required=True, help="Path to input rice image")
+    parser.add_argument("--crop-type", default="rice", help="Crop type (default: rice)")
+    parser.add_argument("--checkpoint-path", default=str(DEFAULT_CHECKPOINT_PATH), help="Path to checkpoint (.pt)")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    hf_token = args.hf_token or os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN")
-    model, tokenizer = load_model_and_tokenizer(args.adapter_id, args.base_id, args.device_map, hf_token)
-    result = generate_irrigation_json(model, tokenizer, args.prompt, args.max_new_tokens)
-    print(result)
+    image_path = Path(args.image_path)
+    if not image_path.exists():
+        raise FileNotFoundError(f"Image not found: {image_path}")
+
+    image_base64 = _image_file_to_base64(image_path)
+    result = predict_crop_stage(
+        image_base64=image_base64,
+        crop_type=args.crop_type,
+        model_path=args.checkpoint_path,
+    )
+    print(json.dumps(result))
 
 
 if __name__ == "__main__":

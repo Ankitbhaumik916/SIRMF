@@ -16,9 +16,9 @@ SIRMF is a **comprehensive AI-powered smart irrigation management system** that 
   - Report generation uses **live farm stats snapshot at click time**.
   - Ensures each **Generate Report** action reflects current simulator state.
 - **Profile Integration**: Account Statistics now show live farm metrics (Avg Moisture, Avg Health, Needs Irrigation) instead of fixed placeholders.
-- **Crop Stage Detection (CNN + API)**:
-  - New web page for image upload and growth-stage inference.
-  - New backend endpoint to run Python inference from uploaded image data.
+- **Crop Stage Detection (SegFormer + API)**:
+  - New web page for image upload and rice growth-stage inference.
+  - Backend endpoint runs local `best.pt` semantic segmentation inference (no hosted LLM/Hugging Face dependency).
 - **App Internationalization + Settings**:
   - Added language store, localized UI labels/messages, and a dedicated Settings page for language selection.
 
@@ -158,8 +158,8 @@ SEPM/
 ├── 📂 python_sim/                        # Desktop simulator + ML
 │   ├── 🎮 farm_sim.py                   # Main pygame simulator (★ ENHANCED)
 │   ├── 🎨 graphics_enhanced.py          # Graphics engine (★ NEW - 480 lines)
-│   ├── crop_stage_inference.py          # Crop-stage inference entrypoint (★ NEW)
-│   ├── train_crop_stage_cnn.py          # CNN training script (★ NEW)
+│   ├── crop_stage_inference.py          # Crop-stage inference entrypoint using local best.pt (★ NEW)
+│   ├── train_crop_stage_cnn.py          # Legacy crop-stage CNN training script
 │   │
 │   ├── 🤖 ML System Files (★ NEW)
 │   ├── ml_dataset_generation.py        # Dataset generator (258 lines)
@@ -232,6 +232,9 @@ source .venv/bin/activate
 
 # Install packages
 pip install pygame numpy pandas scikit-learn xgboost
+
+# Required for crop-stage segmentation inference
+pip install transformers torch torchvision pillow
 ```
 
 ### Step 4: Setup ML Models (Optional but Recommended)
