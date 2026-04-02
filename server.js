@@ -66,14 +66,25 @@ async function getWeatherData(lat, lon) {
 
     return {
       temp: Math.round(response.data.main.temp),
+      temp_c: Math.round(response.data.main.temp),
       feelsLike: Math.round(response.data.main.feels_like),
       humidity: response.data.main.humidity,
       pressure: response.data.main.pressure,
       windSpeed: Math.round(response.data.wind.speed * 3.6), // m/s to km/h
+      wind_kph: Math.round(response.data.wind.speed * 3.6),
       cloudiness: response.data.clouds.all,
       description: response.data.weather[0].description,
+      condition: response.data.weather[0].description,
       icon: response.data.weather[0].main,
       rainfall: response.data.rain ? response.data.rain['1h'] : 0,
+      rain_probability: Math.max(0, Math.min(1, ((response.data.clouds.all || 0) / 120) + (response.data.rain ? 0.25 : 0))),
+      is_raining: Boolean(response.data.rain && response.data.rain['1h'] > 0) || /rain|drizzle|storm/i.test(response.data.weather[0].description || ''),
+      uv_index: Math.max(0, Math.min(11, Math.round(11 - (response.data.clouds.all || 0) / 12 + (response.data.main.temp > 30 ? 1 : 0)))),
+      weather_severity: /storm|extreme|thunder/i.test(response.data.weather[0].description || '')
+        ? 1
+        : /cloud|drizzle|rain|mist|haze/i.test(response.data.weather[0].description || '')
+          ? 0.5
+          : 0,
     }
   } catch (error) {
     console.error('Weather API Error:', error.message)
@@ -99,6 +110,31 @@ async function getCoordinates(location) {
   } catch (error) {
     console.error('Geocoding Error:', error.message)
     return null
+  }
+}
+
+function buildWeatherResponse(location, coords, weather, offline = false) {
+  const temp_c = weather.temp_c ?? weather.temp ?? 32
+  const humidity = weather.humidity ?? 60
+  const wind_kph = weather.wind_kph ?? weather.windSpeed ?? 12
+  const rain_probability = weather.rain_probability ?? 0.15
+  const condition = weather.condition ?? weather.description ?? 'Partly cloudy'
+
+  return {
+    location,
+    lat: coords?.lat ?? null,
+    lon: coords?.lon ?? null,
+    temp_c,
+    humidity,
+    rain_probability,
+    wind_kph,
+    condition,
+    is_raining: weather.is_raining ?? /rain|drizzle|storm/i.test(condition),
+    uv_index: weather.uv_index ?? 7,
+    weather_severity: weather.weather_severity ?? (/storm|extreme|thunder/i.test(condition) ? 1 : /cloud|drizzle|rain|mist|haze/i.test(condition) ? 0.5 : 0),
+    offline,
+    source: offline ? 'cached' : 'live',
+    ...weather,
   }
 }
 
@@ -381,6 +417,67 @@ app.get('/api/weather/:location', async (req, res) => {
   }
 
   res.json({ location, ...coords, weather: weatherData })
+})
+
+app.get('/weather', async (req, res) => {
+  const location = req.query.location || req.session.user?.location || 'Nashik, Maharashtra'
+  const hasSessionCoords = req.session.user?.lat != null && req.session.user?.lon != null
+  const coords = hasSessionCoords
+    ? { lat: req.session.user.lat, lon: req.session.user.lon }
+    : await getCoordinates(location)
+
+  if (!coords) {
+    const cachedWeather = req.session.lastWeather
+    if (cachedWeather) {
+      return res.json({ ...cachedWeather, offline: true, source: 'cached' })
+    }
+
+    return res.json(
+      buildWeatherResponse(location, null, {
+        temp_c: 32,
+        humidity: 60,
+        rain_probability: 0.15,
+        wind_kph: 12,
+        condition: 'Partly cloudy',
+        is_raining: false,
+        uv_index: 7,
+        weather_severity: 0.5,
+      }, true)
+    )
+  }
+
+  const weatherData = await getWeatherData(coords.lat, coords.lon)
+  if (!weatherData) {
+    const cachedWeather = req.session.lastWeather
+    if (cachedWeather) {
+      return res.json({ ...cachedWeather, offline: true, source: 'cached' })
+    }
+
+    return res.json(
+      buildWeatherResponse(location, coords, {
+        temp_c: 32,
+        humidity: 60,
+        rain_probability: 0.15,
+        wind_kph: 12,
+        condition: 'Partly cloudy',
+        is_raining: false,
+        uv_index: 7,
+        weather_severity: 0.5,
+      }, true)
+    )
+  }
+
+  const payload = buildWeatherResponse(location, coords, weatherData, false)
+  req.session.lastWeather = payload
+  res.json(payload)
+})
+
+app.get('/simulation', (req, res) => {
+  res.sendFile(join(__dirname, 'sirmf_ml.html'))
+})
+
+app.get('/impl1', (req, res) => {
+  res.sendFile(join(__dirname, 'impl1.html'))
 })
 
 app.post('/api/crop-stage/predict', async (req, res) => {

@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIRMF · ML Farm Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060d0a;--s1:#0b1610;--s2:#101f14;--s3:#162519;
+  --green:#39e07a;--green2:#1fa84d;--green3:#0d5c2a;
+  --teal:#1de8c8;--amber:#f0a020;--amber2:#c07810;
+  --red:#e05040;--blue:#3ab8f0;--purple:#a060f0;
+  --text:#c8ead0;--muted:#5a8a68;--dim:#2a4a32;
+  --border:rgba(57,224,122,0.1);--border2:rgba(57,224,122,0.2);
+  --mono:'Space Mono',monospace;--serif:'Playfair Display',Georgia,serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
+
+/* ── Layout ── */
+.shell{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;border-bottom:0.5px solid var(--border2);
+  background:var(--s1);
+}
+.logo{font-family:var(--serif);font-size:22px;color:var(--green);letter-spacing:-0.5px}
+.logo em{font-style:italic;color:var(--amber)}
+.logo sub{font-family:var(--mono);font-size:10px;color:var(--muted);vertical-align:baseline;margin-left:6px}
+.badges{display:flex;gap:8px;align-items:center}
+.badge{font-size:10px;padding:3px 9px;border-radius:20px;border:0.5px solid;letter-spacing:0.05em}
+.badge.nn{color:var(--purple);border-color:rgba(160,96,240,0.4);background:rgba(160,96,240,0.08)}
+.badge.rl{color:var(--teal);border-color:rgba(29,232,200,0.4);background:rgba(29,232,200,0.08)}
+.badge.ep{color:var(--amber);border-color:rgba(240,160,32,0.4);background:rgba(240,160,32,0.08)}
+
+.main{display:grid;grid-template-columns:1fr 340px;gap:0;overflow:hidden}
+
+/* ── Farm canvas panel ── */
+.farm-panel{position:relative;background:var(--bg);border-right:0.5px solid var(--border)}
+#farmCanvas{display:block;width:100%;height:100%;min-height:500px}
+.hud{position:absolute;top:10px;left:12px;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.hud-chip{font-size:10px;padding:3px 9px;border-radius:3px;background:rgba(6,13,10,0.88);border:0.5px solid var(--border2);color:var(--muted)}
+.hud-chip span{color:var(--green);font-weight:700}
+.hud-weather{position:absolute;top:10px;right:12px;font-size:10px;padding:3px 10px;border-radius:3px;background:rgba(6,13,10,0.88);border:0.5px solid var(--border);color:var(--muted);pointer-events:none}
+
+/* ── Right panel ── */
+.right{display:flex;flex-direction:column;overflow-y:auto;background:var(--s1)}
+
+.section{padding:14px 16px;border-bottom:0.5px solid var(--border)}
+.section h3{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+
+/* Metrics grid */
+.met4{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.met{background:var(--s2);border-radius:5px;padding:8px 10px;border:0.5px solid var(--border)}
+.met .ml{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px}
+.met .mv{font-size:22px;font-weight:700;line-height:1}
+.met .mu{font-size:9px;color:var(--muted)}
+.c-water{color:var(--blue)}.c-moist{color:var(--green)}.c-health{color:var(--amber)}.c-yield{color:var(--purple)}
+.c-risk{color:var(--red)}
+
+/* Bars */
+.bar-row{display:flex;flex-direction:column;gap:7px}
+.bitem{display:flex;flex-direction:column;gap:3px}
+.blabel{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.blabel span{color:var(--text);font-weight:700}
+.btrack{height:4px;background:var(--s3);border-radius:2px;overflow:hidden}
+.bfill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.bf-irr{background:var(--blue)}.bf-mois{background:var(--green)}.bf-health{background:var(--amber)}.bf-risk{background:var(--red)}
+
+/* Neural net visualizer */
+.nn-canvas-wrap{background:var(--s2);border-radius:6px;padding:6px;border:0.5px solid var(--border)}
+#nnCanvas{display:block;width:100%}
+
+/* RL stats */
+.rl-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.rl-stat{background:var(--s2);border-radius:5px;padding:7px;text-align:center;border:0.5px solid var(--border)}
+.rl-stat .rv{font-size:16px;font-weight:700;color:var(--teal)}
+.rl-stat .rl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px}
+
+/* ML decision */
+.decision-box{background:var(--s2);border-radius:6px;padding:10px;border-left:2px solid var(--green);font-size:10px;line-height:1.7;color:var(--muted)}
+.decision-box .dtitle{color:var(--green);font-weight:700;margin-bottom:4px;font-size:10px}
+.decision-box .dval{color:var(--text)}
+
+/* Trend chart */
+#trendCanvas{display:block;width:100%;border-radius:4px;background:var(--s2)}
+
+/* Controls */
+.ctrl-grid{display:flex;flex-direction:column;gap:8px}
+.crow{display:flex;gap:6px}
+button{
+  font-family:var(--mono);font-size:10px;cursor:pointer;
+  border-radius:4px;border:0.5px solid var(--border2);
+  background:transparent;color:var(--text);
+  padding:7px 10px;transition:all 0.15s;flex:1;letter-spacing:0.02em;
+}
+button:hover{background:var(--s2);border-color:var(--green2)}
+button.go{background:var(--green3);border-color:var(--green2);color:var(--green)}
+button.go:hover{background:var(--green2)}
+button.warn{border-color:rgba(224,80,64,0.4);color:var(--red)}
+button.warn:hover{background:rgba(224,80,64,0.1)}
+.sl-wrap{display:flex;flex-direction:column;gap:4px}
+.sl-wrap label{font-size:10px;color:var(--muted);display:flex;justify-content:space-between}
+.sl-wrap label span{color:var(--green)}
+input[type=range]{width:100%;height:3px;-webkit-appearance:none;appearance:none;background:var(--s3);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--green);border:2px solid var(--bg);cursor:pointer}
+select{font-family:var(--mono);font-size:10px;background:var(--s2);color:var(--text);border:0.5px solid var(--border2);border-radius:4px;padding:6px 8px;cursor:pointer;width:100%}
+
+/* Bottom bar */
+.bottombar{
+  display:flex;align-items:center;gap:16px;padding:8px 20px;
+  border-top:0.5px solid var(--border);background:var(--s1);
+  font-size:9px;color:var(--dim);letter-spacing:0.06em;
+}
+.bstat{display:flex;align-items:center;gap:5px}
+.bstat span{color:var(--muted)}
+.dot-live{width:5px;height:5px;border-radius:50%;background:var(--green);animation:glow 1.5s infinite}
+@keyframes glow{0%,100%{opacity:1;box-shadow:0 0 4px var(--green)}50%{opacity:0.4;box-shadow:none}}
+
+/* Episode flash */
+.ep-flash{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(6,13,10,0.9);z-index:100;pointer-events:none;
+  opacity:0;transition:opacity 0.4s;
+}
+.ep-flash.show{opacity:1}
+.ep-card{
+  font-family:var(--serif);text-align:center;
+  border:0.5px solid var(--green2);background:var(--s1);
+  border-radius:10px;padding:30px 40px;
+}
+.ep-card h2{font-size:26px;color:var(--green);margin-bottom:8px}
+.ep-card p{font-size:13px;color:var(--muted);font-family:var(--mono)}
+.ep-card .ep-score{font-size:48px;font-weight:600;color:var(--amber);margin:10px 0}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header class="topbar">
+  <div>
+    <div class="logo">SIRMF <em>Intelligence</em><sub>v2.0</sub></div>
+  </div>
+  <div class="badges">
+    <div class="badge nn">Neural Net 8-12-8-4</div>
+    <div class="badge rl">Reinforcement Learning</div>
+    <div class="badge ep" id="epBadge">Episode 1</div>
+  </div>
+</header>
+
+<div class="main">
+  <!-- Farm sim -->
+  <div class="farm-panel">
+    <canvas id="farmCanvas"></canvas>
+    <div class="hud">
+      <div class="hud-chip">Day <span id="hudDay">1</span>/120 &nbsp;·&nbsp; <span id="hudStage">Seedling</span></div>
+      <div class="hud-chip">Reward <span id="hudReward">0.00</span> &nbsp;·&nbsp; ε <span id="hudEps">1.00</span></div>
+      <div class="hud-chip">Loss <span id="hudLoss">—</span></div>
+    </div>
+    <div class="hud-weather" id="hudWeather">☀ Clear · 32°C</div>
+  </div>
+
+  <!-- Right panel -->
+  <div class="right">
+
+    <div class="section">
+      <h3>Field telemetry</h3>
+      <div class="met4">
+        <div class="met"><div class="ml">Water depth</div><div class="mv c-water" id="mW">4.2</div><div class="mu">cm</div></div>
+        <div class="met"><div class="ml">Soil moisture</div><div class="mv c-moist" id="mM">72</div><div class="mu">%</div></div>
+        <div class="met"><div class="ml">Crop health</div><div class="mv c-health" id="mH">85</div><div class="mu">%</div></div>
+        <div class="met"><div class="ml">Disease risk</div><div class="mv c-risk" id="mR">12</div><div class="mu">%</div></div>
+        <div class="met"><div class="ml">Est. yield</div><div class="mv c-yield" id="mY">—</div><div class="mu">t/ha</div></div>
+        <div class="met"><div class="ml">Cum. reward</div><div class="mv c-water" id="mCR">0.0</div><div class="mu">pts</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>ML control output</h3>
+      <div class="bar-row">
+        <div class="bitem"><div class="blabel">Irrigation <span id="bIL">60%</span></div><div class="btrack"><div class="bfill bf-irr" id="bIF" style="width:60%"></div></div></div>
+        <div class="bitem"><div class="blabel">Soil moisture <span id="bML">72%</span></div><div class="btrack"><div class="bfill bf-mois" id="bMF" style="width:72%"></div></div></div>
+        <div class="bitem"><div class="blabel">Crop health <span id="bHL">85%</span></div><div class="btrack"><div class="bfill bf-health" id="bHF" style="width:85%"></div></div></div>
+        <div class="bitem"><div class="blabel">Disease risk <span id="bRL">12%</span></div><div class="btrack"><div class="bfill bf-risk" id="bRF" style="width:12%"></div></div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Neural network · live weights</h3>
+      <div class="nn-canvas-wrap"><canvas id="nnCanvas" height="110"></canvas></div>
+    </div>
+
+    <div class="section">
+      <h3>RL training stats</h3>
+      <div class="rl-stats">
+        <div class="rl-stat"><div class="rv" id="rsEp">1</div><div class="rl">Episode</div></div>
+        <div class="rl-stat"><div class="rv" id="rsSteps">0</div><div class="rl">Total steps</div></div>
+        <div class="rl-stat"><div class="rv" id="rsAvgR" style="color:var(--amber)">0.0</div><div class="rl">Avg reward</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>ML decision</h3>
+      <div class="decision-box">
+        <div class="dtitle" id="dTitle">Waiting for simulation...</div>
+        <div id="dBody" class="dval"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Trend (health · moisture · yield)</h3>
+      <canvas id="trendCanvas" height="70"></canvas>
+    </div>
+
+    <div class="section">
+      <h3>Controls</h3>
+      <div class="ctrl-grid">
+        <div class="crow">
+          <button class="go" id="btnPlay" onclick="togglePlay()">▶ Start</button>
+          <button onclick="newEpisode()">⟳ New episode</button>
+        </div>
+        <div class="crow">
+          <button onclick="triggerWeather('rain')">🌧 Rain</button>
+          <button onclick="triggerWeather('drought')">☀ Drought</button>
+          <button onclick="triggerWeather('clear')">⛅ Clear</button>
+        </div>
+        <div class="sl-wrap">
+          <label>Sim speed <span id="spdLbl">2×</span></label>
+          <input type="range" min="0" max="4" value="2" step="1" id="spdSlider" oninput="setSpeed(this.value)">
+        </div>
+        <select id="soilSel" onchange="setSoil(this.value)">
+          <option value="clay">Clay — high water retention</option>
+          <option value="loam" selected>Loam — balanced drainage</option>
+          <option value="sandy">Sandy — fast draining</option>
+        </select>
+      </div>
+    </div>
+
+  </div><!-- /right -->
+</div><!-- /main -->
+
+<footer class="bottombar">
+  <div class="bstat"><div class="dot-live"></div><span>RL AGENT ACTIVE</span></div>
+  <div class="bstat">ARCH <span>8→12→8→4</span></div>
+  <div class="bstat">LR <span>0.003</span></div>
+  <div class="bstat">γ <span>0.95</span></div>
+  <div class="bstat">REPLAY <span id="footReplay">0/2000</span></div>
+  <div class="bstat">BATCH <span>32</span></div>
+</footer>
+
+</div><!-- /shell -->
+
+<!-- Episode flash -->
+<div class="ep-flash" id="epFlash">
+  <div class="ep-card">
+    <h2>Episode Complete</h2>
+    <div class="ep-score" id="epScore">0.0</div>
+    <p id="epMsg">Starting next episode...</p>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+//  NEURAL NETWORK (from scratch, no libs)
+// ════════════════════════════════════════════
+// Architecture: 8 inputs → 12 hidden → 8 hidden → 4 outputs
+// Inputs:  [moisture, waterDepth, health, diseaseRisk, dayNorm, tempNorm, rainFlag, droughtFlag]
+// Outputs: [irrRate(0-1), fertilizerBoost(0-1), drainageOpen(0-1), confidence(0-1)]
+
+class Matrix {
+  constructor(r, c) { this.r = r; this.c = c; this.d = new Float32Array(r * c); }
+  get(i, j) { return this.d[i * this.c + j]; }
+  set(i, j, v) { this.d[i * this.c + j] = v; }
+  static rand(r, c, scale = 0.5) {
+    const m = new Matrix(r, c);
+    for (let i = 0; i < m.d.length; i++) m.d[i] = (Math.random() * 2 - 1) * scale;
+    return m;
+  }
+}
+
+class NeuralNet {
+  constructor() {
+    const he = (n) => Math.sqrt(2 / n);
+    this.W = [
+      Matrix.rand(12, 8,  he(8)),
+      Matrix.rand(8,  12, he(12)),
+      Matrix.rand(4,  8,  he(8)),
+    ];
+    this.B = [
+      new Matrix(12, 1), new Matrix(8, 1), new Matrix(4, 1)
+    ];
+    // Adam optimizer state
+    this.mW = this.W.map(w => { const m = new Matrix(w.r, w.c); m.d.fill(0); return m; });
+    this.vW = this.W.map(w => { const m = new Matrix(w.r, w.c); m.d.fill(0); return m; });
+    this.mB = this.B.map(b => { const m = new Matrix(b.r, b.c); m.d.fill(0); return m; });
+    this.vB = this.B.map(b => { const m = new Matrix(b.r, b.c); m.d.fill(0); return m; });
+    this.t = 0; // adam step counter
+    this.lr = 0.003; this.b1 = 0.9; this.b2 = 0.999; this.eps = 1e-8;
+    this.acts = []; // store activations for backprop
+  }
+
+  relu(x) { return Math.max(0, x); }
+  reluD(x) { return x > 0 ? 1 : 0; }
+  sigmoid(x) { return 1 / (1 + Math.exp(-Math.max(-15, Math.min(15, x)))); }
+
+  forward(input) {
+    // input: Float32Array of length 8
+    this.acts = [input];
+    let cur = input;
+    for (let l = 0; l < this.W.length; l++) {
+      const W = this.W[l], B = this.B[l];
+      const out = new Float32Array(W.r);
+      for (let i = 0; i < W.r; i++) {
+        let sum = B.d[i];
+        for (let j = 0; j < W.c; j++) sum += W.get(i, j) * cur[j];
+        // last layer: sigmoid for [0,1] outputs; hidden: relu
+        out[i] = l === this.W.length - 1 ? this.sigmoid(sum) : this.relu(sum);
+      }
+      this.acts.push(out);
+      cur = out;
+    }
+    return cur; // [irrRate, fertBoost, drainOpen, confidence]
+  }
+
+  // Simple DQN-style update: minimise MSE between output[actionIdx] and target
+  train(input, actionIdx, target) {
+    const pred = this.forward(input);
+    const loss = 0.5 * (pred[actionIdx] - target) ** 2;
+    // Backprop
+    // Output layer error
+    const dOut = new Float32Array(pred.length);
+    dOut[actionIdx] = pred[actionIdx] - target; // MSE gradient × sigmoid derivative
+    dOut[actionIdx] *= pred[actionIdx] * (1 - pred[actionIdx]);
+    this._backprop(dOut);
+    return loss;
+  }
+
+  trainBatch(samples) {
+    // samples: [{input, actionIdx, target}]
+    let totalLoss = 0;
+    // Accumulate gradients
+    const dWs = this.W.map(w => new Float32Array(w.d.length));
+    const dBs = this.B.map(b => new Float32Array(b.d.length));
+
+    for (const s of samples) {
+      const pred = this.forward(s.input);
+      totalLoss += 0.5 * (pred[s.actionIdx] - s.target) ** 2;
+      const dOut = new Float32Array(pred.length);
+      dOut[s.actionIdx] = (pred[s.actionIdx] - s.target) * pred[s.actionIdx] * (1 - pred[s.actionIdx]);
+      this._accGrad(dOut, dWs, dBs);
+    }
+
+    const n = samples.length;
+    this.t++;
+    const lrc = this.lr * Math.sqrt(1 - this.b2 ** this.t) / (1 - this.b1 ** this.t);
+
+    for (let l = 0; l < this.W.length; l++) {
+      for (let i = 0; i < this.W[l].d.length; i++) {
+        const g = dWs[l][i] / n;
+        this.mW[l].d[i] = this.b1 * this.mW[l].d[i] + (1 - this.b1) * g;
+        this.vW[l].d[i] = this.b2 * this.vW[l].d[i] + (1 - this.b2) * g * g;
+        this.W[l].d[i] -= lrc * this.mW[l].d[i] / (Math.sqrt(this.vW[l].d[i]) + this.eps);
+      }
+      for (let i = 0; i < this.B[l].d.length; i++) {
+        const g = dBs[l][i] / n;
+        this.mB[l].d[i] = this.b1 * this.mB[l].d[i] + (1 - this.b1) * g;
+        this.vB[l].d[i] = this.b2 * this.vB[l].d[i] + (1 - this.b2) * g * g;
+        this.B[l].d[i] -= lrc * this.mB[l].d[i] / (Math.sqrt(this.vB[l].d[i]) + this.eps);
+      }
+    }
+    return totalLoss / n;
+  }
+
+  _accGrad(dOut, dWs, dBs) {
+    let delta = dOut;
+    for (let l = this.W.length - 1; l >= 0; l--) {
+      const W = this.W[l], act = this.acts[l];
+      // dW
+      for (let i = 0; i < W.r; i++)
+        for (let j = 0; j < W.c; j++)
+          dWs[l][i * W.c + j] += delta[i] * act[j];
+      for (let i = 0; i < W.r; i++) dBs[l][i] += delta[i];
+      // propagate delta
+      if (l > 0) {
+        const prevAct = this.acts[l];
+        const newDelta = new Float32Array(W.c);
+        for (let j = 0; j < W.c; j++) {
+          let s = 0;
+          for (let i = 0; i < W.r; i++) s += W.get(i, j) * delta[i];
+          newDelta[j] = s * this.reluD(prevAct[j]);
+        }
+        delta = newDelta;
+      }
+    }
+  }
+
+  _backprop(dOut) { this._accGrad(dOut, this.W.map(w => new Float32Array(w.d.length)), this.B.map(b => new Float32Array(b.d.length))); }
+
+  getWeightStats() {
+    return this.W.map(w => {
+      let mn = Infinity, mx = -Infinity;
+      for (const v of w.d) { if (v < mn) mn = v; if (v > mx) mx = v; }
+      return { min: mn, max: mx, len: w.d.length };
+    });
+  }
+}
+
+// ════════════════════════════════════════════
+//  REPLAY BUFFER
+// ════════════════════════════════════════════
+class ReplayBuffer {
+  constructor(cap = 2000) { this.cap = cap; this.buf = []; this.idx = 0; }
+  push(exp) {
+    if (this.buf.length < this.cap) this.buf.push(exp);
+    else this.buf[this.idx % this.cap] = exp;
+    this.idx++;
+  }
+  sample(n) {
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(this.buf[Math.floor(Math.random() * this.buf.length)]);
+    return out;
+  }
+  get size() { return this.buf.length; }
+}
+
+// ════════════════════════════════════════════
+//  RL AGENT
+// ════════════════════════════════════════════
+class FarmAgent {
+  constructor() {
+    this.net = new NeuralNet();
+    this.targetNet = new NeuralNet(); // target network for stable training
+    this.replay = new ReplayBuffer(2000);
+    this.epsilon = 1.0;       // exploration rate
+    this.epsilonMin = 0.05;
+    this.epsilonDecay = 0.998;
+    this.gamma = 0.95;        // discount factor
+    this.batchSize = 32;
+    this.trainEvery = 4;      // steps between training
+    this.targetUpdate = 50;   // steps between target net sync
+    this.steps = 0;
+    this.totalReward = 0;
+    this.episodeRewards = [];
+    this.lastLoss = 0;
+    this.lastAction = null;
+  }
+
+  // State vector from simulation state
+  encodeState(sim) {
+    const avgM = avg(sim.cells.map(c => c.moisture));
+    const avgW = avg(sim.cells.map(c => c.waterDepth));
+    const avgH = avg(sim.cells.map(c => c.health));
+    return new Float32Array([
+      avgM,
+      avgW / 10,
+      avgH,
+      sim.diseaseRisk,
+      sim.day / 120,
+      (sim.weather.temp - 20) / 25,
+      sim.weather.rain ? 1 : 0,
+      sim.weather.drought ? 1 : 0,
+    ]);
+  }
+
+  // Action: which of 4 output neurons to act on
+  // We treat all 4 outputs as continuous actions (not discrete)
+  act(state) {
+    if (Math.random() < this.epsilon) {
+      // Explore: random continuous actions
+      return {
+        irrRate:   Math.random(),
+        fertilize: Math.random() * 0.5,
+        drain:     Math.random(),
+        confidence: Math.random(),
+        explored: true
+      };
+    }
+    const out = this.net.forward(state);
+    return {
+      irrRate:   out[0],
+      fertilize: out[1],
+      drain:     out[2],
+      confidence: out[3],
+      explored: false
+    };
+  }
+
+  // Reward function — agronomic scoring
+  reward(sim, action) {
+    const avgM = avg(sim.cells.map(c => c.moisture));
+    const avgW = avg(sim.cells.map(c => c.waterDepth));
+    const avgH = avg(sim.cells.map(c => c.health));
+    const stage = getStage(sim.day);
+
+    let r = 0;
+
+    // Optimal moisture for rice: 0.55–0.80
+    const moistOpt = avgM >= 0.55 && avgM <= 0.80;
+    r += moistOpt ? 0.4 : -0.3 * Math.abs(avgM - 0.67);
+
+    // Optimal water depth for rice: 3–6 cm
+    const waterOpt = avgW >= 3 && avgW <= 6;
+    r += waterOpt ? 0.3 : -0.2 * Math.abs(avgW - 4.5) / 4.5;
+
+    // Health reward
+    r += avgH * 0.5;
+
+    // Disease penalty
+    r -= sim.diseaseRisk * 0.4;
+
+    // Water efficiency: penalise over-irrigation
+    if (action.irrRate > 0.85 && avgW > 6) r -= 0.2;
+    if (action.drain > 0.7 && avgW < 3) r -= 0.15;
+
+    // Stage-specific bonuses
+    if (stage === 'Heading' && avgH > 0.75) r += 0.2;
+    if (stage === 'Ripening' && avgW < 4) r += 0.1; // slight drainage good at ripening
+
+    return Math.max(-1, Math.min(1, r));
+  }
+
+  learn(state, action, reward, nextState) {
+    // Store multi-action experience
+    const actionVec = [action.irrRate, action.fertilize, action.drain, action.confidence];
+    this.replay.push({ state, actionVec, reward, nextState });
+    this.steps++;
+    this.totalReward += reward;
+
+    if (this.replay.size < this.batchSize) return 0;
+    if (this.steps % this.trainEvery !== 0) return this.lastLoss;
+
+    // Sample batch and train
+    const batch = this.replay.sample(this.batchSize);
+    const samples = [];
+    for (const exp of batch) {
+      const nextQ = this.targetNet.forward(exp.nextState);
+      const maxNextQ = Math.max(...nextQ);
+      for (let a = 0; a < 4; a++) {
+        const target = exp.actionVec[a] === undefined ? 0 :
+          exp.reward + this.gamma * maxNextQ;
+        samples.push({ input: exp.state, actionIdx: a, target: clamp(target, 0, 1) });
+      }
+    }
+    this.lastLoss = this.net.trainBatch(samples);
+
+    // Decay epsilon
+    if (this.epsilon > this.epsilonMin) this.epsilon *= this.epsilonDecay;
+
+    // Sync target network
+    if (this.steps % this.targetUpdate === 0) {
+      for (let l = 0; l < this.net.W.length; l++) {
+        this.targetNet.W[l].d.set(this.net.W[l].d);
+        this.targetNet.B[l].d.set(this.net.B[l].d);
+      }
+    }
+
+    return this.lastLoss;
+  }
+
+  endEpisode(totalR) {
+    this.episodeRewards.push(totalR);
+    this.totalReward = 0;
+  }
+}
+
+// ════════════════════════════════════════════
+//  SIMULATION STATE
+// ════════════════════════════════════════════
+const ROWS = 9, COLS = 20;
+const SOIL_PARAMS = {
+  clay:  { retention: 0.92, rgb: [52, 38, 24], drain: 0.003 },
+  loam:  { retention: 0.75, rgb: [68, 50, 28], drain: 0.007 },
+  sandy: { retention: 0.50, rgb: [130, 100, 55], drain: 0.018 },
+};
+
+let sim = {
+  cells: [],
+  day: 1,
+  weather: { type: 'clear', temp: 32, rain: false, drought: false, rainTimer: 0 },
+  soilKey: 'loam',
+  diseaseRisk: 0.1,
+  cumReward: 0,
+  episode: 1,
+};
+
+let agent = new FarmAgent();
+let playing = false;
+let stepTimer = null;
+let frameId = null;
+let animT = 0;
+const SPEEDS = [1200, 500, 200, 80, 20];
+let speed = 2;
+let trendData = [];
+let rainParticles = [];
+
+function mkCell() {
+  return {
+    moisture: 0.50 + Math.random() * 0.30,
+    waterDepth: 2.5 + Math.random() * 3,
+    health: 0.70 + Math.random() * 0.25,
+    diseaseSpots: 0,
+    seed: Math.random(),
+    // smooth visual
+    vM: 0.65, vW: 4, vH: 0.8,
+  };
+}
+
+function initSim() {
+  sim.cells = Array.from({ length: ROWS * COLS }, mkCell);
+  sim.day = 1;
+  sim.diseaseRisk = 0.08 + Math.random() * 0.07;
+  sim.cumReward = 0;
+  sim.weather = { type: 'clear', temp: 30 + Math.random() * 4, rain: false, drought: false, rainTimer: 0 };
+  trendData = [];
+  rainParticles = [];
+}
+initSim();
+
+// ════════════════════════════════════════════
+//  SIMULATION STEP
+// ════════════════════════════════════════════
+let lastState = null;
+let lastAction = null;
+let episodeReward = 0;
+
+function simStep() {
+  sim.day++;
+
+  // Agent decides
+  const state = agent.encodeState(sim);
+  const action = agent.act(state);
+  agent.lastAction = action;
+
+  const soil = SOIL_PARAMS[sim.soilKey];
+  const irr = action.irrRate;
+  const drain = action.drain;
+
+  // Weather dynamics
+  if (sim.weather.rain) {
+    sim.weather.rainTimer--;
+    if (sim.weather.rainTimer <= 0) {
+      sim.weather.rain = false;
+      sim.weather.type = 'clear';
+    }
+  }
+  // Random weather events
+  if (Math.random() < 0.008) triggerWeather('rain');
+  if (Math.random() < 0.004) triggerWeather('drought');
+  if (Math.random() < 0.003 && sim.weather.drought) triggerWeather('clear');
+
+  // Disease dynamics
+  const avgMoist = avg(sim.cells.map(c => c.moisture));
+  const avgHealth = avg(sim.cells.map(c => c.health));
+  const diseaseGrowth = avgMoist > 0.85 ? 0.015 : avgMoist < 0.3 ? 0.005 : -0.005;
+  const healthFactor = avgHealth < 0.5 ? 0.012 : -0.003;
+  sim.diseaseRisk = clamp(sim.diseaseRisk + diseaseGrowth + healthFactor + (Math.random()-0.5)*0.004, 0, 1);
+
+  // Update each cell
+  sim.cells.forEach((c, i) => {
+    const lv = Math.sin(c.seed * 9.1 + sim.day * 0.07) * 0.012;
+    const evap = sim.weather.drought ? 0.06 : 0.015 + (sim.weather.temp - 28) * 0.002;
+    const rainAdd = sim.weather.rain ? 0.28 + Math.random() * 0.1 : 0;
+    const irrAdd = irr * 0.15 * (1 - c.waterDepth / 11);
+    const drainOut = drain * 0.08 * (c.waterDepth / 8);
+
+    c.waterDepth = clamp(c.waterDepth - evap * soil.drain * 55 + irrAdd + rainAdd - drainOut + lv * 0.5, 0, 11);
+
+    const moistTarget = 0.28 + c.waterDepth / 13 + irr * 0.28 + (sim.weather.rain ? 0.1 : 0);
+    c.moisture += (moistTarget - c.moisture) * 0.09 + lv * 0.4;
+    c.moisture = clamp(c.moisture, 0.03, 1);
+
+    // Health dynamics
+    const wStress = c.waterDepth < 1.2 ? -0.022 : c.waterDepth > 9.5 ? -0.012 : 0.004;
+    const mStress = c.moisture < 0.22 ? -0.030 : c.moisture < 0.45 ? -0.010 : 0.003;
+    const heatS = sim.weather.temp > 38 ? -0.018 : sim.weather.temp < 18 ? -0.010 : 0;
+    const diseaseS = -sim.diseaseRisk * 0.015;
+    const fertBonus = action.fertilize * 0.006;
+    const growthNatural = sim.day < 105 ? 0.002 : -0.0015;
+    c.health = clamp(c.health + wStress + mStress + heatS + diseaseS + fertBonus + growthNatural + lv * 0.2, 0.03, 1);
+
+    // Smooth visual
+    c.vM += (c.moisture - c.vM) * 0.13;
+    c.vW += (c.waterDepth - c.vW) * 0.11;
+    c.vH += (c.health - c.vH) * 0.11;
+  });
+
+  // Reward & learn
+  const r = agent.reward(sim, action);
+  episodeReward += r;
+  sim.cumReward += r;
+
+  if (lastState) agent.learn(lastState, lastAction, r, state);
+  lastState = state;
+  lastAction = action;
+
+  // Yield estimate (only meaningful after day 80)
+  const avgH2 = avg(sim.cells.map(c => c.health));
+  const yieldEst = sim.day > 80 ? (3.5 + avgH2 * 3.5 - sim.diseaseRisk * 2).toFixed(1) : '—';
+
+  // Trend
+  trendData.push({ h: avgH2, m: avgMoist, y: sim.day > 80 ? parseFloat(yieldEst) || 0 : 0 });
+  if (trendData.length > 120) trendData.shift();
+
+  // Update UI
+  updateUI(action, yieldEst);
+
+  // Episode end
+  if (sim.day >= 120) {
+    agent.endEpisode(episodeReward);
+    showEpisodeEnd(episodeReward);
+  }
+}
+
+// ════════════════════════════════════════════
+//  CANVAS RENDERING
+// ════════════════════════════════════════════
+const fc = document.getElementById('farmCanvas');
+const ctx = fc.getContext('2d');
+
+function resizeCanvas() {
+  const r = fc.parentElement.getBoundingClientRect();
+  fc.width = r.width;
+  fc.height = Math.max(500, window.innerHeight - 120);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+function render(ts) {
+  animT = ts * 0.001;
+  const W = fc.width, H = fc.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const FT = 32, FB = H - 50;
+  const FL = 44, FR = W - 44;
+  const FW = FR - FL, FH = FB - FT;
+  const CW = FW / COLS, CH = FH / ROWS;
+
+  drawSky(W, FT);
+  drawSoilGrid(FL, FT, CW, CH);
+  drawBunds(FL, FT, FW, FH);
+  drawCrops(FL, FT, CW, CH);
+  drawChannels(FL, FR, FT, FH, W);
+  drawWaterFlow(FL, FT, FW, FH);
+  if (sim.weather.rain) drawRain(W, H);
+  drawHeatHaze(FL, FT, FW, FH);
+  drawBottomGraph(FL, FB, FW, H - FB - 4, W);
+
+  frameId = requestAnimationFrame(render);
+}
+
+function drawSky(W, FT) {
+  const isDrought = sim.weather.drought;
+  const isRain = sim.weather.rain;
+  const skyTop = isRain ? '#060e10' : isDrought ? '#1a0c04' : '#050f08';
+  const skyBot = isRain ? '#0c1e14' : isDrought ? '#271408' : '#0a1a10';
+  const gr = ctx.createLinearGradient(0, 0, 0, FT);
+  gr.addColorStop(0, skyTop); gr.addColorStop(1, skyBot);
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, W, FT);
+
+  if (isRain) {
+    // clouds
+    ctx.fillStyle = 'rgba(30,50,40,0.9)';
+    for (let i = 0; i < 4; i++) {
+      const cx = 80 + i * 180 + Math.sin(animT * 0.15 + i) * 6;
+      ctx.beginPath(); ctx.ellipse(cx, 14, 50 + i * 8, 11, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (isDrought) {
+    ctx.fillStyle = '#e8a020';
+    ctx.beginPath(); ctx.arc(W - 55, 16, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(240,170,40,0.35)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4 + animT * 0.4;
+      ctx.beginPath(); ctx.moveTo(W-55+Math.cos(a)*16,16+Math.sin(a)*16); ctx.lineTo(W-55+Math.cos(a)*23,16+Math.sin(a)*23); ctx.stroke();
+    }
+  } else {
+    ctx.fillStyle = '#f0e860';
+    ctx.beginPath(); ctx.arc(W - 55, 16, 9, 0, Math.PI * 2); ctx.fill();
+    // Stars
+    ctx.fillStyle = 'rgba(200,255,200,0.4)';
+    for (let i = 0; i < 12; i++) {
+      const sx = (i * 137 + 30) % (W - 80), sy = (i * 53 + 5) % 28;
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+  }
+}
+
+function drawSoilGrid(FL, FT, CW, CH) {
+  const soil = SOIL_PARAMS[sim.soilKey];
+  sim.cells.forEach((c, i) => {
+    const col = i % COLS, r = Math.floor(i / COLS);
+    const x = FL + col * CW, y = FT + r * CH;
+    const [sr, sg, sb] = soil.rgb;
+    const m = c.vM;
+    const dr = lerp(sr + 35, sr - 15, m);
+    const dg = lerp(sg + 25, sg - 8, m);
+    const db = lerp(sb + 20, sb - 8, m);
+    ctx.fillStyle = `rgb(${dr|0},${dg|0},${db|0})`;
+    ctx.fillRect(x + 0.5, y + 0.5, CW - 1, CH - 1);
+
+    // water layer
+    if (c.vW > 0.2) {
+      const wa = clamp(c.vW / 11, 0, 0.72);
+      const wave = Math.sin(animT * 0.9 + col * 0.35 + r * 0.28) * 0.025;
+      ctx.fillStyle = `rgba(29,111,164,${wa + wave})`;
+      ctx.fillRect(x + 0.5, y + 0.5, CW - 1, CH - 1);
+      // shimmer
+      if (c.vW > 2.5) {
+        const sh = 0.06 + Math.sin(animT * 2 + i * 0.6) * 0.03;
+        ctx.fillStyle = `rgba(120,210,255,${sh})`;
+        ctx.fillRect(x + 1, y + 2, CW - 2, 2.5);
+      }
+    }
+
+    // Disease spots
+    if (sim.diseaseRisk > 0.25 && c.health < 0.6 && Math.random() < 0.002) {
+      ctx.fillStyle = 'rgba(180,80,20,0.5)';
+      ctx.beginPath(); ctx.arc(x + CW/2, y + CH * 0.6, 2, 0, Math.PI * 2); ctx.fill();
+    }
+  });
+}
+
+function drawBunds(FL, FT, FW, FH) {
+  const soil = SOIL_PARAMS[sim.soilKey];
+  const [r, g, b] = soil.rgb;
+  const c = `rgb(${(r*0.65)|0},${(g*0.65)|0},${(b*0.65)|0})`;
+  ctx.fillStyle = c;
+  ctx.fillRect(FL - 7, FT - 3, 7, FH + 6);
+  ctx.fillRect(FL + FW, FT - 3, 7, FH + 6);
+  ctx.fillRect(FL - 7, FT - 5, FW + 14, 5);
+  ctx.fillRect(FL - 7, FT + FH, FW + 14, 5);
+  // internal dividers
+  ctx.fillStyle = `rgba(${(r*0.5)|0},${(g*0.5)|0},${(b*0.5)|0},0.55)`;
+  const CH = FH / ROWS;
+  for (let ri = 2; ri < ROWS; ri += 2) ctx.fillRect(FL, FT + ri * CH - 1, FW, 2);
+}
+
+function drawCrops(FL, FT, CW, CH) {
+  sim.cells.forEach((c, i) => {
+    const col = i % COLS, r = Math.floor(i / COLS);
+    const x = FL + col * CW, y = FT + r * CH;
+    if (sim.day < 3) return;
+    _drawOneCrop(x, y, CW, CH, c, sim.day, animT);
+  });
+}
+
+function _drawOneCrop(x, y, cw, ch, cell, day, t) {
+  const h = cell.vH;
+  const cx = x + cw / 2;
+  const groundY = y + ch - 3;
+  const maxH = ch * 0.88;
+
+  let stemH;
+  if (day < 18) stemH = maxH * (day / 18) * 0.38;
+  else if (day < 45) stemH = maxH * (0.38 + (day - 18) / 27 * 0.32);
+  else if (day < 80) stemH = maxH * (0.70 + (day - 45) / 35 * 0.22);
+  else stemH = maxH * 0.92;
+
+  const sway = Math.sin(t * 0.65 + cell.seed * 6.28) * 2.2 * h;
+
+  // Color by stage
+  let sr, sg, sb;
+  if (day > 100) { sr = lerp(170, 210, h); sg = lerp(115, 150, h); sb = lerp(15, 30, h); }
+  else if (day > 72) { sr = lerp(70, 95, h); sg = lerp(145, 185, h); sb = lerp(25, 45, h); }
+  else { sr = lerp(25, 55, h); sg = lerp(115, 175, h); sb = lerp(18, 38, h); }
+
+  const alpha = 0.45 + h * 0.55;
+  ctx.strokeStyle = `rgba(${sr|0},${sg|0},${sb|0},${alpha})`;
+  ctx.lineWidth = 0.7 + h * 0.7;
+
+  // Stem with natural curve
+  ctx.beginPath();
+  ctx.moveTo(cx, groundY);
+  ctx.quadraticCurveTo(cx + sway * 0.45, groundY - stemH * 0.55, cx + sway, groundY - stemH);
+  ctx.stroke();
+
+  // Two leaves
+  const lLen = stemH * 0.42;
+  const lAlpha = 0.45 + h * 0.48;
+  ctx.strokeStyle = `rgba(${(sr-8)|0},${(sg+12)|0},${sb|0},${lAlpha})`;
+  ctx.lineWidth = 0.55;
+  const lm = groundY - stemH * 0.52;
+
+  ctx.beginPath();
+  ctx.moveTo(cx + sway * 0.5, lm);
+  ctx.quadraticCurveTo(cx - lLen * 0.48 + sway * 0.2, lm - lLen * 0.22, cx - lLen * 0.85 + sway * 0.8, lm + lLen * 0.18);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(cx + sway * 0.5, lm - 5);
+  ctx.quadraticCurveTo(cx + lLen * 0.48 + sway * 0.2, lm - 5 - lLen * 0.22, cx + lLen * 0.85 + sway * 0.8, lm - 5 + lLen * 0.18);
+  ctx.stroke();
+
+  // Panicle
+  if (day > 62) {
+    const prog = clamp((day - 62) / 45, 0, 1);
+    const topX = cx + sway, topY = groundY - stemH;
+    const pColor = day > 95 ? `rgba(210,158,30,${0.55+h*0.45})` : `rgba(110,165,45,${0.5+h*0.45})`;
+    ctx.fillStyle = pColor;
+    ctx.beginPath(); ctx.ellipse(topX, topY + 2, 1.6 * prog, 5.5 * prog, 0.1, 0, Math.PI * 2); ctx.fill();
+
+    if (day > 75 && prog > 0.35) {
+      ctx.strokeStyle = pColor; ctx.lineWidth = 0.5;
+      for (let s = 0; s < 5; s++) {
+        const sa = -0.55 + s * 0.28 + Math.sin(t * 0.45 + s + cell.seed) * 0.04;
+        ctx.beginPath(); ctx.moveTo(topX, topY + 5); ctx.lineTo(topX + Math.sin(sa) * 4.5, topY + 9 + s * 1.8); ctx.stroke();
+      }
+    }
+  }
+}
+
+function drawChannels(FL, FR, FT, FH, W) {
+  const irr = agent.lastAction ? agent.lastAction.irrRate : 0.5;
+  const drain = agent.lastAction ? agent.lastAction.drain : 0.3;
+
+  // Inlet
+  const gIn = ctx.createLinearGradient(0, 0, FL - 7, 0);
+  gIn.addColorStop(0, 'rgba(29,111,164,0)'); gIn.addColorStop(1, `rgba(29,111,164,${0.2+irr*0.55})`);
+  ctx.fillStyle = gIn; ctx.fillRect(0, FT, FL - 7, FH);
+
+  // Outlet
+  const gOut = ctx.createLinearGradient(FR + 7, 0, W, 0);
+  gOut.addColorStop(0, `rgba(29,111,164,${0.12+drain*0.35})`); gOut.addColorStop(1, 'rgba(29,111,164,0)');
+  ctx.fillStyle = gOut; ctx.fillRect(FR + 7, FT, W - FR - 7, FH);
+
+  ctx.fillStyle = 'rgba(58,160,216,0.5)'; ctx.font = '9px Space Mono,monospace'; ctx.textAlign = 'center';
+  ctx.save(); ctx.translate(16, FT + FH / 2); ctx.rotate(-Math.PI/2); ctx.fillText('INLET', 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(W - 16, FT + FH / 2); ctx.rotate(Math.PI/2); ctx.fillText('OUTLET', 0, 0); ctx.restore();
+}
+
+function drawWaterFlow(FL, FT, FW, FH) {
+  const irr = agent.lastAction ? agent.lastAction.irrRate : 0;
+  if (irr < 0.05) return;
+  ctx.strokeStyle = `rgba(80,190,255,${0.2+irr*0.35})`; ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    const py = FT + FH * (0.18 + i * 0.21);
+    const off = (animT * 35 * irr + i * 55) % (FW + 80) - 40;
+    ctx.beginPath(); ctx.moveTo(FL + off - 12, py); ctx.lineTo(FL + off + 12, py); ctx.stroke();
+  }
+}
+
+function drawHeatHaze(FL, FT, FW, FH) {
+  if (!sim.weather.drought) return;
+  for (let i = 0; i < 6; i++) {
+    const hx = FL + FW * ((i + animT * 0.08) % 1);
+    const hy = FT + Math.sin(animT * 1.2 + i * 1.7) * 8;
+    ctx.strokeStyle = `rgba(255,180,60,${0.04+Math.sin(animT+i)*0.02})`;
+    ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(hx, FT); ctx.lineTo(hx, FT + FH); ctx.stroke();
+  }
+}
+
+function drawRain(W, H) {
+  while (rainParticles.length < 140) rainParticles.push({ x: Math.random()*W, y: Math.random()*H, spd: 4+Math.random()*5, len: 7+Math.random()*7 });
+  ctx.strokeStyle = 'rgba(140,200,255,0.5)'; ctx.lineWidth = 0.75;
+  rainParticles.forEach(d => {
+    ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x+0.8, d.y+d.len); ctx.stroke();
+    d.y += d.spd; d.x += 0.4;
+    if (d.y > H) { d.y = -10; d.x = Math.random()*W; }
+  });
+}
+
+function drawBottomGraph(FL, FB, FW, GH, W) {
+  if (trendData.length < 2 || GH < 8) return;
+  const step = FW / Math.max(trendData.length - 1, 1);
+
+  ctx.fillStyle = 'rgba(11,22,16,0.85)'; ctx.fillRect(FL, FB, FW, GH);
+  ctx.strokeStyle = 'rgba(57,224,122,0.08)'; ctx.lineWidth = 0.5;
+  for (let g = 0; g <= 4; g++) {
+    const gy = FB + g * GH / 4;
+    ctx.beginPath(); ctx.moveTo(FL, gy); ctx.lineTo(FL + FW, gy); ctx.stroke();
+  }
+
+  const lines = [
+    { key: 'h', color: '#f0a020', label: 'health' },
+    { key: 'm', color: '#39e07a', label: 'moisture' },
+  ];
+  lines.forEach(ln => {
+    ctx.strokeStyle = ln.color; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    trendData.forEach((d, i) => {
+      const px = FL + i * step, py = FB + GH - d[ln.key] * (GH - 4) - 2;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = 'rgba(200,220,210,0.35)'; ctx.font = '8px Space Mono,monospace'; ctx.textAlign = 'left';
+  ctx.fillText('▸ health', FL + 4, FB + 10);
+  ctx.fillStyle = 'rgba(57,224,122,0.35)';
+  ctx.fillText('▸ moisture', FL + 55, FB + 10);
+}
+
+// ════════════════════════════════════════════
+//  NN CANVAS VISUALISER
+// ════════════════════════════════════════════
+const nnc = document.getElementById('nnCanvas');
+const nnCtx = nnc.getContext('2d');
+
+function drawNN() {
+  const W = nnc.offsetWidth || 300;
+  nnc.width = W; nnc.height = 110;
+  const H = 110;
+  nnCtx.clearRect(0, 0, W, H);
+
+  const layers = [8, 12, 8, 4];
+  const labels = ['State', 'H1', 'H2', 'Actions'];
+  const xPos = layers.map((_, i) => (W * (i + 0.5)) / layers.length);
+
+  // Draw connections first
+  const stats = agent.net.getWeightStats();
+  layers.forEach((n, li) => {
+    if (li === layers.length - 1) return;
+    const nNext = layers[li + 1];
+    const x1 = xPos[li], x2 = xPos[li + 1];
+    for (let i = 0; i < Math.min(n, 8); i++) {
+      for (let j = 0; j < Math.min(nNext, 8); j++) {
+        const y1 = H * 0.12 + i * ((H * 0.78) / Math.min(n, 8));
+        const y2 = H * 0.12 + j * ((H * 0.78) / Math.min(nNext, 8));
+        const w = agent.net.W[li] ? agent.net.W[li].get(j, i) : 0;
+        const norm = (w - stats[li].min) / (stats[li].max - stats[li].min + 1e-8);
+        const col = w > 0 ? `rgba(57,224,122,${0.06 + norm * 0.18})` : `rgba(224,80,64,${0.06 + (1-norm) * 0.15})`;
+        nnCtx.strokeStyle = col; nnCtx.lineWidth = 0.5;
+        nnCtx.beginPath(); nnCtx.moveTo(x1, y1); nnCtx.lineTo(x2, y2); nnCtx.stroke();
+      }
+    }
+  });
+
+  // Activations
+  const lastActs = agent.net.acts;
+
+  // Draw nodes
+  layers.forEach((n, li) => {
+    const display = Math.min(n, 8);
+    for (let i = 0; i < display; i++) {
+      const x = xPos[li];
+      const y = H * 0.12 + i * ((H * 0.78) / display);
+      const actVal = lastActs[li] ? clamp(lastActs[li][i] || 0, 0, 1) : 0.5;
+      const col = li === layers.length - 1
+        ? `rgba(160,96,240,${0.4 + actVal * 0.6})`
+        : `rgba(57,224,122,${0.25 + actVal * 0.75})`;
+      nnCtx.fillStyle = col;
+      nnCtx.beginPath(); nnCtx.arc(x, y, 3.5, 0, Math.PI * 2); nnCtx.fill();
+    }
+    // label
+    nnCtx.fillStyle = 'rgba(90,138,104,0.7)'; nnCtx.font = '8px Space Mono,monospace'; nnCtx.textAlign = 'center';
+    nnCtx.fillText(labels[li], xPos[li], H - 2);
+  });
+}
+
+// ════════════════════════════════════════════
+//  TREND CHART
+// ════════════════════════════════════════════
+const tc = document.getElementById('trendCanvas');
+const tCtx = tc.getContext('2d');
+
+function drawTrend() {
+  const W = tc.offsetWidth || 280; tc.width = W; tc.height = 70;
+  const H = 70;
+  tCtx.clearRect(0, 0, W, H);
+  if (trendData.length < 2) return;
+  const step = W / Math.max(trendData.length - 1, 1);
+  [['h','#f0a020'],['m','#39e07a']].forEach(([k, col]) => {
+    tCtx.strokeStyle = col; tCtx.lineWidth = 1.2;
+    tCtx.beginPath();
+    trendData.forEach((d, i) => {
+      const px = i * step, py = H - d[k] * (H - 6) - 3;
+      i === 0 ? tCtx.moveTo(px, py) : tCtx.lineTo(px, py);
+    });
+    tCtx.stroke();
+  });
+  tCtx.fillStyle = 'rgba(90,138,104,0.5)'; tCtx.font = '8px Space Mono,monospace'; tCtx.textAlign = 'left';
+  tCtx.fillText('amber=health  green=moisture', 4, 10);
+}
+
+// ════════════════════════════════════════════
+//  UI UPDATES
+// ════════════════════════════════════════════
+function updateUI(action, yieldEst) {
+  const avgM = avg(sim.cells.map(c => c.vM));
+  const avgW = avg(sim.cells.map(c => c.vW));
+  const avgH = avg(sim.cells.map(c => c.vH));
+  const dr = sim.diseaseRisk;
+  const irr = action ? action.irrRate : 0.6;
+
+  document.getElementById('mW').textContent = avgW.toFixed(1);
+  document.getElementById('mM').textContent = Math.round(avgM * 100);
+  document.getElementById('mH').textContent = Math.round(avgH * 100);
+  document.getElementById('mR').textContent = Math.round(dr * 100);
+  document.getElementById('mY').textContent = yieldEst;
+  document.getElementById('mCR').textContent = sim.cumReward.toFixed(1);
+
+  const bar = (id, val, labelId) => {
+    const p = Math.round(clamp(val, 0, 1) * 100);
+    document.getElementById(id).style.width = p + '%';
+    document.getElementById(labelId).textContent = p + '%';
+  };
+  bar('bIF', irr, 'bIL');
+  bar('bMF', avgM, 'bML');
+  bar('bHF', avgH, 'bHL');
+  bar('bRF', dr, 'bRL');
+
+  // HUD
+  document.getElementById('hudDay').textContent = sim.day;
+  document.getElementById('hudStage').textContent = getStage(sim.day);
+  document.getElementById('hudReward').textContent = sim.cumReward.toFixed(1);
+  document.getElementById('hudEps').textContent = agent.epsilon.toFixed(2);
+  document.getElementById('hudLoss').textContent = agent.lastLoss ? agent.lastLoss.toFixed(4) : '—';
+  document.getElementById('hudWeather').textContent = sim.weather.rain ? '🌧 Rain · ' + sim.weather.temp.toFixed(0) + '°C'
+    : sim.weather.drought ? '🌵 Drought · ' + sim.weather.temp.toFixed(0) + '°C'
+    : '☀ Clear · ' + sim.weather.temp.toFixed(0) + '°C';
+
+  // RL stats
+  document.getElementById('rsEp').textContent = sim.episode;
+  document.getElementById('rsSteps').textContent = agent.steps;
+  const avgEpR = agent.episodeRewards.length ? (agent.episodeRewards.slice(-5).reduce((a,b)=>a+b,0)/Math.min(5,agent.episodeRewards.length)).toFixed(1) : '0.0';
+  document.getElementById('rsAvgR').textContent = avgEpR;
+  document.getElementById('epBadge').textContent = 'Episode ' + sim.episode;
+  document.getElementById('footReplay').textContent = agent.replay.size + '/2000';
+
+  // Decision box
+  const stage = getStage(sim.day);
+  const explored = action && action.explored;
+  document.getElementById('dTitle').textContent = explored ? '↻ Exploring (ε=' + agent.epsilon.toFixed(2) + ')' : '● ML Decision';
+  const msgs = [];
+  if (irr > 0.7) msgs.push(`High irrigation (${(irr*100).toFixed(0)}%) — boosting water depth`);
+  else if (irr < 0.3) msgs.push(`Low irrigation (${(irr*100).toFixed(0)}%) — conserving water`);
+  else msgs.push(`Moderate irrigation (${(irr*100).toFixed(0)}%)`);
+  if (action && action.fertilize > 0.5) msgs.push(`Fertilizer boost active (${(action.fertilize*100).toFixed(0)}%)`);
+  if (dr > 0.4) msgs.push(`⚠ High disease risk — reducing moisture`);
+  if (avgW < 2) msgs.push(`⚠ Low water depth — risk of drought stress`);
+  msgs.push(`Stage: ${stage} · Day ${sim.day}`);
+  document.getElementById('dBody').textContent = msgs.join(' · ');
+
+  drawNN();
+  drawTrend();
+}
+
+// ════════════════════════════════════════════
+//  CONTROLS
+// ════════════════════════════════════════════
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('btnPlay');
+  if (playing) {
+    btn.textContent = '⏸ Pause'; btn.classList.remove('go');
+    if (!frameId) frameId = requestAnimationFrame(render);
+    scheduleStep();
+  } else {
+    btn.textContent = '▶ Resume'; btn.classList.add('go');
+    clearTimeout(stepTimer);
+  }
+}
+
+function scheduleStep() {
+  if (!playing) return;
+  stepTimer = setTimeout(() => {
+    if (sim.day < 120) { simStep(); scheduleStep(); }
+    else { playing = false; document.getElementById('btnPlay').textContent = '▶ Start'; document.getElementById('btnPlay').classList.add('go'); }
+  }, SPEEDS[speed]);
+}
+
+function newEpisode() {
+  playing = false; clearTimeout(stepTimer);
+  document.getElementById('btnPlay').textContent = '▶ Start';
+  document.getElementById('btnPlay').classList.add('go');
+  sim.episode++;
+  lastState = null; lastAction = null; episodeReward = 0;
+  initSim();
+  updateUI(null, '—');
+  document.getElementById('epFlash').classList.remove('show');
+}
+
+function setSpeed(v) {
+  speed = parseInt(v);
+  const labels = ['0.5×','1×','2×','4×','8×'];
+  document.getElementById('spdLbl').textContent = labels[speed];
+}
+
+function setSoil(v) { sim.soilKey = v; }
+
+function triggerWeather(type) {
+  if (type === 'rain') {
+    sim.weather.rain = true; sim.weather.drought = false;
+    sim.weather.type = 'rain'; sim.weather.rainTimer = 25 + Math.floor(Math.random()*15);
+    sim.weather.temp = Math.max(22, sim.weather.temp - 4);
+    rainParticles = [];
+  } else if (type === 'drought') {
+    sim.weather.drought = true; sim.weather.rain = false;
+    sim.weather.type = 'drought'; sim.weather.rainTimer = 0;
+    sim.weather.temp = Math.min(45, sim.weather.temp + 7);
+  } else {
+    sim.weather.drought = false; sim.weather.rain = false;
+    sim.weather.type = 'clear'; sim.weather.rainTimer = 0;
+    sim.weather.temp = 30 + Math.random() * 4;
+  }
+}
+
+function showEpisodeEnd(totalR) {
+  const flash = document.getElementById('epFlash');
+  document.getElementById('epScore').textContent = totalR.toFixed(1);
+  const avgH = avg(sim.cells.map(c => c.health));
+  const yield_ = (3.5 + avgH * 3.5 - sim.diseaseRisk * 2).toFixed(1);
+  document.getElementById('epMsg').textContent = `Yield estimate: ${yield_} t/ha · Starting ep. ${sim.episode+1} in 3s`;
+  flash.classList.add('show');
+  setTimeout(() => { flash.classList.remove('show'); newEpisode(); if (playing) { playing = true; scheduleStep(); } }, 3000);
+}
+
+// ════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════
+function avg(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function getStage(d) {
+  if (d < 18) return 'Seedling';
+  if (d < 45) return 'Tillering';
+  if (d < 70) return 'Heading';
+  if (d < 95) return 'Ripening';
+  return 'Harvest';
+}
+
+// Boot
+frameId = requestAnimationFrame(render);
+updateUI(null, '—');
+setInterval(drawNN, 500);
+</script>
+</body>
+</html>

@@ -3,6 +3,8 @@
   import FarmingSimulation from '../utils/farmingSimulation.js';
 
   export let userLandArea = 100; // Land area in square units
+  export let irrigationMode = 'auto'; // 'auto' or 'manual'
+  export let manualWaterTrigger = 0;
   export let onFarmSelect = null;
   export let onStatsUpdate = null;
 
@@ -10,57 +12,63 @@
   let containerElement;
   let farmInfoPopup = null;
 
+
+  // Track last manualWaterTrigger to detect changes
+  let lastManualWaterTrigger = manualWaterTrigger;
+
   onMount(() => {
-    // Wait for next tick to ensure DOM is ready
     setTimeout(() => {
       if (!containerElement) {
         console.error('Container element not found');
         return;
       }
-
       try {
-        // Calculate map dimensions based on user's land area
-        // Assuming each tile represents ~10 sq units
         const tilesPerSide = Math.max(6, Math.ceil(Math.sqrt(userLandArea / 10)));
-        
-        console.log('Initializing simulation with:', {
-          landArea: userLandArea,
-          tilesPerSide,
-          containerId: containerElement.id
-        });
-        
-        // Initialize simulation
         simulation = new FarmingSimulation(
           containerElement.id,
           tilesPerSide,
           tilesPerSide,
-          32 // tileSize in pixels
+          32
         );
-
-        // Set callback for farm selection
         simulation.setFarmInfoCallback((farmInfo) => {
           farmInfoPopup = farmInfo;
-          if (onFarmSelect) {
-            onFarmSelect(farmInfo);
-          }
+          if (onFarmSelect) onFarmSelect(farmInfo);
         });
-
         simulation.setFarmStatsCallback((stats) => {
-          if (onStatsUpdate) {
-            onStatsUpdate(stats);
-          }
+          if (onStatsUpdate) onStatsUpdate(stats);
         });
       } catch (error) {
         console.error('Error initializing simulation:', error);
       }
     }, 100);
-
     return () => {
-      if (simulation) {
-        simulation.stop();
-      }
+      if (simulation) simulation.stop();
     };
   });
+
+  // Reactively handle irrigationMode and manualWaterTrigger
+  $: if (simulation) {
+    if (irrigationMode === 'auto') {
+      simulation.start && simulation.start();
+    } else if (irrigationMode === 'manual') {
+      simulation.stop && simulation.stop();
+    }
+  }
+
+  $: if (simulation && irrigationMode === 'manual' && manualWaterTrigger !== lastManualWaterTrigger) {
+    // Gradually add water to all farmland tiles
+    if (simulation.farms) {
+      simulation.farms.forEach(farm => {
+        if (farm.tileType === 'farmland') {
+          // Add water gradually (e.g., +10 moisture, clamp to 100)
+          farm.soilMoisture = Math.min(100, farm.soilMoisture + 10);
+        }
+      });
+    }
+    lastManualWaterTrigger = manualWaterTrigger;
+    // Optionally, update dashboard
+    simulation.updateDashboard && simulation.updateDashboard();
+  }
 
   onDestroy(() => {
     if (simulation) {
