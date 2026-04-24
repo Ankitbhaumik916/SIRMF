@@ -1,427 +1,262 @@
-# Architecture & System Overview
+# SIRMF Architecture (Current)
 
-## Component Architecture Diagram
+Last updated: 2026-04-15
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                       Your SEPM Application                      │
-│                      (Svelte + Vite Setup)                       │
-└─────────────────────────────────────────────────────────────────┘
-                               ▼
-                    ┌──────────────────────┐
-                    │   Router / Pages     │
-                    │  (App.svelte)        │
-                    └──────────────────────┘
-                               ▼
-        ┌──────────────────────┬──────────────────────┐
-        ▼                      ▼                      ▼
-    ┌────────────┐         ┌────────────┐      ┌──────────────┐
-    │ Dashboard  │         │   Profile  │  ... │  FarmInfo    │◄─── NEW
-    │ .svelte    │         │ .svelte    │      │ .svelte      │
-    └────────────┘         └────────────┘      └──────────────┘
-                                                        ▼
-                                         ┌──────────────────────────┐
-                                         │ FarmingSimulation Comp   │◄─ NEW
-                                         │ .svelte (Svelte Wrapper)│
-                                         └──────────────────────────┘
-                                                        ▼
-                    ┌───────────────────────────────────┴────────────────┐
-                    ▼                                                     ▼
-        ┌───────────────────────────┐                     ┌──────────────────────┐
-        │ farmingSimulation.js      │                     │ HTML Canvas Element  │
-        │ (Core Simulation Engine)  │◄────────────────────│ + Dashboard Panel    │
-        │ - FarmTile Class          │                     │ + Interaction        │
-        │ - WeatherSystem           │                     │                      │
-        │ - IrrigationController    │                     │ (Browser DOM)        │
-        │ - GameRenderer            │                     │                      │
-        │ - ParticleSystem          │                     └──────────────────────┘
-        │                           │
-        │ No Dependencies!          │
-        │ Pure ES6 JavaScript       │
-        └───────────────────────────┘
-                    ▲
-                    │
-              ┌─────┴──────┐
-              ▼            ▼
-          ┌────────────┐   │
-          │authStore   │   │
-          │.farmSize   │   │
-          └────────────┘   │
-                           │
-                    ┌──────┴────────┐
-                    │ User Data     │
-                    │ From Backend  │
-                    │ (/api/auth)   │
-                    └───────────────┘
+This document describes the architecture currently implemented in the codebase.
+
+## 1. System Overview
+
+SIRMF is a full-stack smart farming application with:
+- A Svelte single-page frontend (Vite dev server)
+- An Express backend API with session authentication
+- File-based user persistence (`data/users.json`)
+- Python crop-stage inference invoked from Node via child process
+- A simulation experience embedded through `impl1.html`
+
+Runtime topology:
+
+```text
+Browser (Svelte SPA on :5173)
+  -> Vite proxy
+    -> Express API on :3000
+      -> OpenWeatherMap API (optional, via env key)
+      -> Python process (crop_stage_inference.py)
+      -> JSON persistence (data/users.json)
 ```
 
-## Data Flow Diagram
+## 2. Frontend Architecture
 
-```
-User Login
-    │
-    ▼
-┌─────────────────────────────────────┐
-│ Backend (/api/auth/login)           │
-│ Returns: { name, farmSize, crop ... }
-└─────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────┐
-│ authStore.set({ user, ... })        │
-│ Now: authStore.user.farmSize = 150  │
-└─────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────┐
-│ FarmInfo.svelte                     │
-│ <FarmingSimulation                  │
-│   userLandArea={150}                │
-│ />                                  │
-└─────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────┐
-│ FarmingSimulation.svelte Wrapper    │
-│ Calculates: gridSize = √(150/10) = 4│
-│ Creates: 12×12 farm grid (144 tiles)│
-└─────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────┐
-│ new FarmingSimulation(               │
-│   'farm-simulator',                 │
-│   12, 12, 32                        │
-│ )                                   │
-└─────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────┐
-│ Game Loop (requestAnimationFrame)   │
-│                                     │
-│ 1. Update Farms (moisture, health)  │
-│ 2. Update Weather                   │
-│ 3. Update Farmer Position           │
-│ 4. Render Canvas                    │
-│ 5. Update Dashboard                 │
-│                                     │
-│ Repeats ~60 FPS                     │
-└─────────────────────────────────────┘
-    │
-    ▼
-┌─────────────────────────────────────┐
-│ User Interaction (E key)            │
-│                                     │
-│ Farmer near farm?                   │
-│ → Show popup                        │
-│ → Trigger onFarmSelect callback     │
-│ → Pass farm data to parent          │
-└─────────────────────────────────────┘
+### 2.1 App Shell and Navigation
+
+- Entry: `src/main.js`
+- Root app: `src/App.svelte`
+
+`App.svelte` uses local state (`currentPage`) instead of an external router. Navigation events are emitted from `Sidebar.svelte` and handled centrally.
+
+Page-level composition:
+- Auth pages: Login, Signup
+- Authenticated pages: Dashboard, Weather, IrrigationReport, CropStageDetection, SoilCheck, FarmInfo, Profile, Settings
+
+### 2.2 Frontend State Stores
+
+- `src/stores/authStore.js`
+  - Session-aware auth state
+  - API calls: login, signup, logout, checkAuth
+  - Uses `credentials: include` to persist session cookies
+
+- `src/stores/weatherStore.js`
+  - Fetches weather from `GET /api/weather/:location`
+  - Stores weather payload, loading/error, timestamp, and searched location
+
+- `src/stores/farmStatsStore.js`
+  - Shared in-app farm metrics (avg moisture, avg health, farms needing irrigation)
+  - Consumed by SoilCheck, Profile, and IrrigationReport
+
+- `src/stores/i18nStore.js`
+  - Language dictionaries and translation helper `t(...)`
+  - Persists language in localStorage
+
+### 2.3 Farm Simulation Path (Current)
+
+`FarmInfo.svelte` currently embeds the simulator UI through an iframe:
+
+```text
+FarmInfo.svelte
+  -> <iframe src="/impl1">
+    -> backend route GET /impl1
+      -> serves impl1.html
 ```
 
-## File Dependency Graph
+Notes:
+- Vite proxy forwards `/impl1` to the backend in development.
+- `impl1.html` is a standalone simulator/dashboard page with its own UI logic.
 
-```
-src/pages/FarmInfo.svelte (Complete Page)
-    ├── import FarmingSimulation.svelte
-    ├── import authStore
-    └── Uses farmSize from store
+### 2.4 Legacy In-App Simulation Module
 
-src/components/FarmingSimulation.svelte
-    ├── import FarmingSimulation from utils
-    ├── export props: userLandArea, onFarmSelect
-    ├── Mounts JavaScript simulation
-    ├── Renders HTML
-    └── Styles CSS
+The repository still includes an in-app simulation module:
+- `src/components/FarmingSimulation.svelte`
+- `src/utils/farmingSimulation.js`
 
-src/utils/farmingSimulation.js
-    ├── class FarmTile
-    ├── class WeatherSystem
-    ├── class IrrigationController
-    ├── class FarmerController
-    ├── class GameRenderer
-    ├── class ParticleSystem
-    └── class FarmingSimulation (main)
-    
-src/stores/authStore.js
-    └── Contains user.farmSize
+This module supports callbacks (`setFarmStatsCallback`, `setFarmInfoCallback`) for direct store integration, but the current `FarmInfo.svelte` path uses iframe embedding instead.
 
-farming-simulation-demo.html
-    ├── Standalone HTML file
-    ├── No build required
-    └── Includes inline farmingSimulation.js
-```
+## 3. Backend Architecture
 
-## Grid Calculation Logic
+### 3.1 Server and Middleware
 
-```
-User's Land Area
-       ↓
-    100 sq units
-       ↓
-Math.max(6, Math.ceil(√(100 / 10)))
-       ↓
-Math.ceil(√10) = 4, but minimum 6
-       ↓
-6 × 6 = 36 tiles (slightly less than 100)
+Main server: `server.js`
 
-Another example:
-400 sq units
-    ↓
-√(400 / 10) = √40 ≈ 6.3, ceil = 7
-Actually in component it's Math.ceil(√(landArea / 10))
+Core middleware:
+- `cors` with frontend origin `http://localhost:5173`
+- `express.json({ limit: '20mb' })`
+- `express.urlencoded({ extended: true, limit: '20mb' })`
+- `express-session` for cookie-based auth/session data
 
-Wait, let me recalculate:
-100 ÷ 10 = 10
-√10 ≈ 3.16, ceil = 4
-max(6, 4) = 6
-6 × 6 = 36 tiles
+### 3.2 Persistence Layer
 
-200 ÷ 10 = 20
-√20 ≈ 4.47, ceil = 5
-max(6, 5) = 6
-6 × 6 = 36 tiles
+Module: `userStorage.js`
 
-So minimum is always 6×6 (36 tiles / 360 sq units nominal)
+Storage model:
+- File-backed JSON object at `data/users.json`
+- Keyed by username
+- Helper functions: load, save, create, update, lookup
 
-400 ÷ 10 = 40
-√40 ≈ 6.32, ceil = 7
-max(6, 7) = 7
-7 × 7 = 49 tiles
+Security note:
+- Password hashing currently uses base64 encoding (`hashPassword`) and is not production-grade cryptography.
 
-Hmm, the minimum 6 tier means:
-50-360 sq units → 6×6 grid (36 tiles)
-361-1000 sq units → 7×7 to 10×10 grid
-1001+ → larger grids
-```
+### 3.3 API Surface
 
-Actually, let me check: The component code does:
-```javascript
-const tilesPerSide = Math.max(6, Math.ceil(Math.sqrt(userLandArea / 10)));
-```
+Auth endpoints:
+- `POST /api/auth/login`
+- `POST /api/auth/signup`
+- `POST /api/auth/logout`
+- `GET /api/auth/user`
+- `POST /api/auth/update-profile`
 
-So the grid scales like:
-- 50 sq units → 6×6 (36 tiles)
-- 100 sq units → 10×10 (100 tiles) [√(100/10) = √10 ≈ 3.16 ceil = 4, max(6,4)=6... wait this is still 6×6]
+Data endpoints:
+- `GET /api/dashboard/data` (session required)
+- `GET /api/weather/:location`
+- `GET /weather` (enhanced weather payload with cache/offline fallback)
 
-Let me trace through manually:
-- landArea = 100
-- landArea / 10 = 10
-- √10 = 3.162...
-- Math.ceil = 4
-- Math.max(6, 4) = 6
-- Grid: 6×6
+Simulation and inference endpoints:
+- `GET /impl1` -> serves `impl1.html`
+- `GET /simulation` -> serves `sirmf_ml.html` (if present)
+- `POST /api/crop-stage/predict` (session required)
 
-Hmm, seems like there might be an issue. Let me recalculate:
-Actually for 100 sq units, we want around 10×10. Let me check the code again...
+Static serving and SPA fallback:
+- Serves built frontend from `dist/`
+- Wildcard route returns `dist/index.html` for non-API paths
 
-The code might need adjustment. But for now:
-- Minimum grid: 6×6 (36 tiles ≈ 360 sq units)
-- It scales from there
+## 4. ML and Python Inference Bridge
 
-## Simulation State Machine
+### 4.1 Crop Stage Flow
 
-```
-┌─────────────────────────────────────┐
-│  Simulation States & Transitions    │
-└─────────────────────────────────────┘
+Frontend (`CropStageDetection.svelte`):
+1. User uploads image
+2. Image converted to base64 in browser
+3. Sends `POST /api/crop-stage/predict` with `{ imageBase64 }`
 
-IDLE (Initial)
-    ↓
-    ├─ Mount Component
-    ├─ Create Farm Grid
-    ├─ Initialize Farmer
-    └─ Start Game Loop
-    ↓
-RUNNING (60 FPS Loop)
-    ├─ Input: WASD/Arrow Keys
-    ├│  ↓ Update Farmer Position
-    ├─ Input: E Key
-    ├│  ↓ Check Nearby Farm
-    ├│  ↓ Show Popup
-    │
-    ├─ Update Farms (all tiles)
-    ├│  ├─ Weather effects
-    ├│  ├─ Evaporation
-    ├│  ├─ Irrigation
-    ├│  └─ Crop health
-    │
-    ├─ Render Canvas
-    ├│  ├─ Draw tiles (color by moisture)
-    ├│  ├─ Draw farmer sprite
-    ├│  ├─ Draw particles
-    ├│  └─ Update dashboard
-    │
-    └─ Loop back (requestAnimationFrame)
+Backend (`server.js`):
+1. Verifies session and crop profile
+2. Spawns Python process (`python_sim/crop_stage_inference.py`)
+3. Sends JSON payload via stdin
+4. Parses JSON response from stdout
+5. Returns prediction to frontend
 
-STOPPED (Unmount)
-    └─ Cancel animation frames
-    └─ Clear resources
+Python (`python_sim/crop_stage_inference.py`):
+- Loads SegFormer checkpoint (default `best.pt` unless overridden)
+- Preprocesses image
+- Runs segmentation
+- Derives stage via rule-based logic from mask features
+- Returns stage, confidence, model metadata, optional warning note
+
+### 4.2 Configurable Runtime Inputs
+
+Environment variables used by backend:
+- `OPENWEATHER_API_KEY`
+- `SESSION_SECRET`
+- `PYTHON_PATH`
+- `CROP_STAGE_MODEL_PATH`
+
+## 5. Data and Control Flows
+
+### 5.1 Authentication Flow
+
+```text
+App mount
+  -> checkAuth() in authStore
+    -> GET /api/auth/user
+      -> session present? yes: authenticated state
+      -> no: login/signup state
 ```
 
-## Class Relationships
+### 5.2 Dashboard Flow
 
-```
-┌──────────────────────────────┐
-│   FarmingSimulation (Main)   │
-│   (Orchestrates everything) │
-└──────────────────────────────┘
-         ├─ owns ─────────┐
-         │                ▼
-         │        ┌─────────────────┐
-         │        │ farms: Array    │
-         │        │ of FarmTile[]   │
-         │        └─────────────────┘
-         │
-         ├─ owns ─────────┐
-         │                ▼
-         │        ┌─────────────────┐
-         │        │ farmer: Farmer  │
-         │        │ Controller      │
-         │        └─────────────────┘
-         │
-         ├─ owns ─────────┐
-         │                ▼
-         │        ┌─────────────────┐
-         │        │ weather:Weather │
-         │        │ System          │
-         │        └─────────────────┘
-         │
-         ├─ owns ─────────┐
-         │                ▼
-         │        ┌─────────────────────┐
-         │        │ renderer:Game       │
-         │        │ Renderer            │
-         │        └─────────────────────┘
-         │                 ├─ uses ─────┐
-         │                 │            ▼
-         │                 │   ┌────────────────┐
-         │                 │   │ particles:     │
-         │                 │   │ Particle       │
-         │                 │   │ System         │
-         │                 │   └────────────────┘
-         │
-         └─ uses ─────────┐
-                          ▼
-                 ┌─────────────────────────┐
-                 │ irrigationController:   │
-                 │ IrrigationController    │
-                 │ (reads farm data)       │
-                 └─────────────────────────┘
+```text
+Dashboard page mount
+  -> GET /api/dashboard/data
+    -> backend combines crop profile + weather + computed metrics
+      -> frontend renders cards, charts, and recommendations
 ```
 
-## Performance Characteristics
+### 5.3 Weather Flow
 
-```
-Grid Size    Tiles    Est. Memory    FPS    CPU Impact
-───────────────────────────────────────────────────────
-6×6          36       ~0.5 MB        60     Minimal
-10×10        100      ~1 MB          60     Minimal
-12×12        144      ~2 MB          60     Minimal
-15×15        225      ~3 MB          60     Low
-20×20        400      ~5 MB          60     Low
-25×25        625      ~8 MB          58     Medium
-30×30        900      ~12 MB         55     Medium
+```text
+Weather page search
+  -> weatherStore.fetchWeatherData(location)
+    -> GET /api/weather/:location
+      -> geocode + weather lookup
+      -> return normalized weather payload
 ```
 
-## Browser Rendering Pipeline
+### 5.4 Irrigation Report Flow
 
-```
-Mouse/Keyboard Events
-         ↓
-  Event Listeners
-  (keydown, keyup)
-         ↓
-  Update Farmer
-  Position State
-         ↓
-  requestAnimationFrame
-  Callback Scheduled
-         ↓
-  Update Phase
-  (all farms, weather)
-         ↓
-  Render Phase
-  (Canvas.drawImage, etc)
-         ↓
-  DOM Update
-  (dashboard stats)
-         ↓
-  Browser Paints
-  (vsync limited to ~60 FPS)
-         ↓
-  Visual Frame
-  Displayed on Screen
+```text
+Generate Report click
+  -> snapshot farmStatsStore (at click time)
+  -> fetch dashboard data (5s timeout)
+  -> buildIrrigationReport(dashboardData, liveFarmStats)
+  -> render performance, deficits, recommendations
 ```
 
-## Integration Points Summary
+## 6. Build and Runtime Model
 
-```
-┌─────────────────────────────────────────────────────────┐
-│          Where to Integrate FarmingSimulation           │
-└─────────────────────────────────────────────────────────┘
+Development mode:
+- `npm run dev`
+- Runs Vite (`:5173`) and Express (`:3000`) concurrently
+- Vite proxies `/api`, `/impl1`, `/simulation`
 
-1. New Page (Recommended)
-   ├─ Create FarmInfo.svelte ✓
-   └─ Add route to router
+Production mode:
+- `npm run build`
+- `npm start`
+- Express serves API and `dist/` static bundle
 
-2. Existing Page
-   ├─ Add component to Dashboard.svelte
-   ├─ Add component to Profile.svelte
-   └─ Or any other page
+## 7. Key Design Characteristics
 
-3. Standalone (No Svelte Required)
-   ├─ Use farming-simulation-demo.html
-   └─ Or embed farmingSimulation.js with vanilla JS
+- Session-first architecture: backend remains source of auth truth
+- Hybrid intelligence stack: JS UI + Node orchestration + Python ML
+- Graceful weather degradation: cached/default responses when API unavailable
+- Modular stores for frontend state
+- Dual simulation implementations: iframe-based standalone sim (active) and Svelte-embedded sim module (available)
 
-4. Backend Integration
-   ├─ Save farm stats to database
-   ├─ Display historical trends
-   └─ Connect to recommendation system
-```
+## 8. Known Architectural Gaps
 
-## Summary of Key Files
+- Password hashing should be replaced with a secure algorithm (for example bcrypt/argon2).
+- JSON file persistence does not provide transactional guarantees or multi-instance safety.
+- Iframe simulator path is isolated from Svelte stores unless explicit bridge messaging is added.
+- `/simulation` route references `sirmf_ml.html`; ensure file exists if route is used.
 
-```
-Files Created:
+## 9. File Map (Primary)
 
-1. src/utils/farmingSimulation.js
-   ├─ 600+ lines of core simulation logic
-   ├─ 9 classes (FarmTile, WeatherSystem, etc)
-   ├─ No external dependencies
-   └─ Fully modular and reusable
+Frontend core:
+- `src/main.js`
+- `src/App.svelte`
+- `src/components/Sidebar.svelte`
+- `src/pages/Dashboard.svelte`
+- `src/pages/Weather.svelte`
+- `src/pages/IrrigationReport.svelte`
+- `src/pages/CropStageDetection.svelte`
+- `src/pages/SoilCheck.svelte`
+- `src/pages/Profile.svelte`
+- `src/pages/FarmInfo.svelte`
+- `src/pages/Settings.svelte`
 
-2. src/components/FarmingSimulation.svelte
-   ├─ Svelte wrapper around #1
-   ├─ Props: userLandArea, onFarmSelect
-   ├─ Built-in styling
-   └─ Dashboard integration
+Stores and utilities:
+- `src/stores/authStore.js`
+- `src/stores/weatherStore.js`
+- `src/stores/farmStatsStore.js`
+- `src/stores/i18nStore.js`
+- `src/utils/irrigationReporting.js`
+- `src/utils/farmingSimulation.js`
 
-3. src/pages/FarmInfo.svelte
-   ├─ Complete example page
-   ├─ Multiple tabs (Overview, Simulation, Tips)
-   ├─ Detailed documentation
-   └─ Production-ready styling
+Backend and persistence:
+- `server.js`
+- `userStorage.js`
+- `data/users.json`
 
-4. farming-simulation-demo.html
-   ├─ Standalone HTML demo
-   ├─ No build required
-   ├─ Self-contained with inline styles
-   └─ Great for testing/reference
-
-5. Documentation Files
-   ├─ FARMING_INTEGRATION.md (comprehensive guide)
-   ├─ QUICKSTART.md (5-minute setup)
-   ├─ DATA_REQUIREMENTS.md (schema info)
-   ├─ FARMING_SIMULATION_SUMMARY.md (overview)
-   └─ ARCHITECTURE.md (this file)
-```
-
----
-
-**The system is designed for:**
-- ✅ Easy integration into existing apps
-- ✅ Scalability (works with any grid size)
-- ✅ Customization (all parameters adjustable)
-- ✅ Performance (60 FPS even with large grids)
-- ✅ Modularity (use as component or standalone)
+Python ML:
+- `python_sim/crop_stage_inference.py`
+- `python_sim/ml_setup.py`
+- `python_sim/ml_train_model.py`
+- `python_sim/ml_irrigation_predictor.py`
+- `python_sim/test_ml_integration.py`
+- `best.pt`
