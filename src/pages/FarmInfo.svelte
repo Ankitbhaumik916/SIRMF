@@ -1,11 +1,7 @@
-<script>
-	import impl1Html from '../../impl1.html?raw';
-</script>
-
 <div class="farm-info-page">
 	<iframe
 		class="simulation-frame"
-		srcdoc={impl1Html}
+		src="/impl1"
 		title="SIRMF ML Farm Intelligence"
 		loading="lazy"
 		referrerpolicy="same-origin"

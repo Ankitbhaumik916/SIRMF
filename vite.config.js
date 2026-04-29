@@ -9,6 +9,14 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
+      },
+      '/impl1': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      '/simulation': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
       }
     }
   },
